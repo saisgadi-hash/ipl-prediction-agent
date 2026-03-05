@@ -1,0 +1,87 @@
+# ══════════════════════════════════════════════════════
+# Daily Data Update & Model Retrain
+# ══════════════════════════════════════════════════════
+# This workflow runs every day at 6 AM UTC during IPL season
+# to download new data, rebuild features, and retrain the model.
+#
+# BEGINNER NOTES:
+#   - GitHub Actions runs this script on GitHub's servers for free
+#   - "cron" is a scheduling format: "0 6 * * *" means "at 6:00 AM every day"
+#   - "workflow_dispatch" means you can also trigger it manually from GitHub
+#   - Free tier: 2000 minutes/month (more than enough for daily 5-min jobs)
+
+name: Daily Data Update & Retrain
+
+on:
+  schedule:
+    # Run at 6 AM UTC daily (11:30 AM IST)
+    - cron: '0 6 * * *'
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-and-retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # Step 1: Get our code from GitHub
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Step 3: Cache Python packages (so we don't reinstall every time)
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Step 5: Download latest data
+      - name: Download latest match data
+        run: python -m src.data_collection.download_cricsheet
+        continue-on-error: true  # Don't fail the whole job if download has issues
+
+      # Step 6: Parse new matches
+      - name: Parse match data
+        run: python -m src.data_collection.parse_matches
+
+      # Step 7: Build player stats
+      - name: Build player statistics
+        run: python -m src.data_collection.build_player_stats
+
+      # Step 8: Collect weather data
+      - name: Collect venue weather
+        run: python -m src.data_collection.weather_collector
+        env:
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        continue-on-error: true
+
+      # Step 9: Build features
+      - name: Build match features
+        run: python -m src.features.build_match_features
+
+      # Step 10: Retrain model
+      - name: Retrain prediction model
+        run: python -m src.models.train_model
+
+      # Step 11: Run back-test (optional, takes longer)
+      # - name: Run back-test
+      #   run: python -m src.models.backtest
+
+      # Step 12: Commit updated data and models back to the repo
+      - name: Commit and push updates
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'Auto-update: daily data refresh and model retrain'
+          file_pattern: 'data/processed/*.csv models/*.pkl'

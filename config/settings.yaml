@@ -1,0 +1,212 @@
+# ══════════════════════════════════════════════════════
+# IPL Prediction AI Agent - Configuration
+# ══════════════════════════════════════════════════════
+
+project:
+  name: "IPL Prediction AI Agent"
+  version: "1.0.0"
+  author: "Goutham"
+
+# ── Data Sources ──
+data_sources:
+  cricsheet:
+    ipl_url: "https://cricsheet.org/downloads/ipl_json.zip"
+    t20i_url: "https://cricsheet.org/downloads/t20s_json.zip"
+    bbl_url: "https://cricsheet.org/downloads/bbl_json.zip"
+    psl_url: "https://cricsheet.org/downloads/psl_json.zip"
+    cpl_url: "https://cricsheet.org/downloads/cpl_json.zip"
+    sa20_url: "https://cricsheet.org/downloads/sa20_json.zip"
+    hundred_url: "https://cricsheet.org/downloads/hundred_json.zip"
+
+  espncricinfo:
+    base_url: "https://www.espncricinfo.com"
+    ipl_stats_url: "https://stats.espncricinfo.com/ci/engine/records/index.html?class=6;id=117;type=trophy"
+    scrape_delay_seconds: 2  # Be respectful to the server
+
+  weather:
+    provider: "openweathermap"
+    api_url: "http://api.openweathermap.org/data/2.5/weather"
+    # API key stored in .env file, not here
+
+# ── IPL Venues with Coordinates ──
+venues:
+  - name: "Wankhede Stadium"
+    city: "Mumbai"
+    lat: 18.9389
+    lon: 72.8258
+    pitch_type: "batting"
+    dew_factor: "high"
+    avg_first_innings: 175
+    avg_second_innings: 165
+
+  - name: "M Chinnaswamy Stadium"
+    city: "Bengaluru"
+    lat: 12.9788
+    lon: 77.5996
+    pitch_type: "batting"
+    dew_factor: "medium"
+    avg_first_innings: 180
+    avg_second_innings: 170
+
+  - name: "MA Chidambaram Stadium"
+    city: "Chennai"
+    lat: 13.0627
+    lon: 80.2792
+    pitch_type: "spin_friendly"
+    dew_factor: "high"
+    avg_first_innings: 165
+    avg_second_innings: 155
+
+  - name: "Eden Gardens"
+    city: "Kolkata"
+    lat: 22.5646
+    lon: 88.3433
+    pitch_type: "balanced"
+    dew_factor: "high"
+    avg_first_innings: 170
+    avg_second_innings: 165
+
+  - name: "Arun Jaitley Stadium"
+    city: "Delhi"
+    lat: 28.6377
+    lon: 77.2433
+    pitch_type: "batting"
+    dew_factor: "high"
+    avg_first_innings: 175
+    avg_second_innings: 168
+
+  - name: "Rajiv Gandhi International Stadium"
+    city: "Hyderabad"
+    lat: 17.4065
+    lon: 78.5506
+    pitch_type: "balanced"
+    dew_factor: "medium"
+    avg_first_innings: 170
+    avg_second_innings: 160
+
+  - name: "Narendra Modi Stadium"
+    city: "Ahmedabad"
+    lat: 23.0916
+    lon: 72.5967
+    pitch_type: "balanced"
+    dew_factor: "medium"
+    avg_first_innings: 168
+    avg_second_innings: 158
+
+  - name: "Punjab Cricket Association Stadium"
+    city: "Mohali"
+    lat: 30.6928
+    lon: 76.7374
+    pitch_type: "pace_friendly"
+    dew_factor: "high"
+    avg_first_innings: 172
+    avg_second_innings: 165
+
+  - name: "Sawai Mansingh Stadium"
+    city: "Jaipur"
+    lat: 26.8929
+    lon: 75.8072
+    pitch_type: "spin_friendly"
+    dew_factor: "medium"
+    avg_first_innings: 165
+    avg_second_innings: 158
+
+  - name: "Ekana Cricket Stadium"
+    city: "Lucknow"
+    lat: 26.8450
+    lon: 80.9462
+    pitch_type: "balanced"
+    dew_factor: "medium"
+    avg_first_innings: 168
+    avg_second_innings: 160
+
+# ── IPL Teams (2025 Season) ──
+teams:
+  - code: "CSK"
+    name: "Chennai Super Kings"
+    home_venue: "MA Chidambaram Stadium"
+  - code: "MI"
+    name: "Mumbai Indians"
+    home_venue: "Wankhede Stadium"
+  - code: "RCB"
+    name: "Royal Challengers Bengaluru"
+    home_venue: "M Chinnaswamy Stadium"
+  - code: "KKR"
+    name: "Kolkata Knight Riders"
+    home_venue: "Eden Gardens"
+  - code: "DC"
+    name: "Delhi Capitals"
+    home_venue: "Arun Jaitley Stadium"
+  - code: "PBKS"
+    name: "Punjab Kings"
+    home_venue: "Punjab Cricket Association Stadium"
+  - code: "RR"
+    name: "Rajasthan Royals"
+    home_venue: "Sawai Mansingh Stadium"
+  - code: "SRH"
+    name: "Sunrisers Hyderabad"
+    home_venue: "Rajiv Gandhi International Stadium"
+  - code: "LSG"
+    name: "Lucknow Super Giants"
+    home_venue: "Ekana Cricket Stadium"
+  - code: "GT"
+    name: "Gujarat Titans"
+    home_venue: "Narendra Modi Stadium"
+
+# ── Model Configuration ──
+model:
+  # Feature engineering
+  form_window: 10          # Number of recent innings for form calculation
+  form_decay: 0.85         # Exponential decay factor for recency weighting
+  h2h_min_matches: 3       # Minimum matches for head-to-head stats to be valid
+
+  # Cross-format weights
+  cross_format_weights:
+    ipl: 0.40
+    international_t20: 0.25
+    other_t20_leagues: 0.20
+    domestic: 0.15
+
+  # XGBoost hyperparameters
+  xgboost:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 3
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+
+  # LightGBM hyperparameters
+  lightgbm:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    num_leaves: 31
+
+  # Ensemble weights
+  ensemble:
+    xgboost_weight: 0.45
+    lightgbm_weight: 0.35
+    logistic_weight: 0.20
+
+  # Target accuracy thresholds
+  accuracy:
+    minimum: 0.60         # Below this = model needs work
+    target: 0.65          # Our goal
+    excellent: 0.70       # Above this = very good
+
+# ── Dashboard Configuration ──
+dashboard:
+  title: "IPL Prediction AI Agent"
+  theme: "dark"
+  refresh_interval_seconds: 300  # Auto-refresh every 5 minutes on match days
+
+# ── Automation ──
+automation:
+  daily_update_time: "06:00"     # UTC time for daily data refresh
+  match_day_interval_minutes: 60  # How often to refresh on match days
+  retrain_after_match: true       # Automatically retrain after each match result

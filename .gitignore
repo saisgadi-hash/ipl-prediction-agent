@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+
+# Data (large files - download fresh via scripts)
+data/raw/*.zip
+data/raw/ipl_matches/
+data/raw/t20i_matches/
+data/raw/other_leagues/
+
+# Models (large files)
+models/*.pkl
+models/*.joblib
+models/*.bin
+
+# MLflow
+mlruns/
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
