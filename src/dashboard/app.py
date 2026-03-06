@@ -16,10 +16,17 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from src.data_collection.team_name_mapper import (
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "data_collection"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "models"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "dashboard"))
+from team_name_mapper import (
     standardise_team_name, get_short_code, ACTIVE_TEAMS, TEAM_SHORT_CODES,
 )
+import __main__
+from train_model import IPLEnsemblePredictor
+__main__.IPLEnsemblePredictor = IPLEnsemblePredictor
 
 # ── Page Config ──
 st.set_page_config(
@@ -449,7 +456,7 @@ def main():
 
         # User points display
         try:
-            from src.dashboard.feedback import FeedbackManager
+            from feedback import FeedbackManager
             fm = FeedbackManager()
             user_stats = fm.get_user_stats(st.session_state["session_id"])
             if user_stats["points"] > 0:
@@ -601,7 +608,7 @@ def show_match_predictor(data):
 
     if predict_clicked:
         try:
-            from src.models.predict import predict_match
+            from predict import predict_match
 
             result = predict_match(
                 team1, team2,
@@ -715,7 +722,7 @@ def show_match_predictor(data):
 
                 if st.button("Submit My Prediction", key="submit_feedback"):
                     try:
-                        from src.dashboard.feedback import FeedbackManager
+                        from feedback import FeedbackManager
                         fm = FeedbackManager()
                         fb_result = fm.submit_prediction_feedback(
                             team1=team1, team2=team2,
@@ -744,7 +751,7 @@ def show_match_predictor(data):
                 rating = st.slider("Rate 1-5", 1, 5, 3, key="justification_rating", label_visibility="collapsed")
                 if st.button("Submit Rating", key="submit_rating"):
                     try:
-                        from src.dashboard.feedback import FeedbackManager
+                        from feedback import FeedbackManager
                         fm = FeedbackManager()
                         fm.submit_justification_rating(
                             team1=team1, team2=team2, rating=rating,
@@ -778,7 +785,7 @@ def show_tournament_rankings(data):
 
     if st.button("Generate Rankings", type="primary"):
         try:
-            from src.models.predict import predict_tournament_winner
+            from predict import predict_tournament_winner
             with st.spinner("Simulating all matchups..."):
                 rankings = predict_tournament_winner()
 
@@ -979,7 +986,7 @@ def show_community(data):
     st.markdown('<p style="color: #6B7280;">See how the crowd compares against the AI</p>', unsafe_allow_html=True)
 
     try:
-        from src.dashboard.feedback import FeedbackManager
+        from feedback import FeedbackManager
         fm = FeedbackManager()
         community = fm.get_community_stats()
         user_stats = fm.get_user_stats(st.session_state["session_id"])

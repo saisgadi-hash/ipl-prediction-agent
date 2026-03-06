@@ -26,9 +26,11 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.dirname(__file__))
 from config import PROCESSED_DATA_DIR
-from src.data_collection.team_name_mapper import apply_team_mapping
+from team_name_mapper import apply_team_mapping
 
 
 def build_batting_stats(deliveries: pd.DataFrame) -> pd.DataFrame:

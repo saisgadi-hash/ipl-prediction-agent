@@ -25,13 +25,18 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
 from config import PROCESSED_DATA_DIR, EXTERNAL_DATA_DIR, MODEL_CONFIG
-from src.data_collection.team_name_mapper import apply_team_mapping
 
-from src.features.player_form import calculate_batting_form, calculate_bowling_form
-from src.features.head_to_head import calculate_team_h2h
-from src.features.venue_features import calculate_venue_stats, calculate_team_venue_record
+# Add parent dirs so we can import sibling packages
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "data_collection"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "features"))
+
+from team_name_mapper import apply_team_mapping
+from player_form import calculate_batting_form, calculate_bowling_form
+from head_to_head import calculate_team_h2h
+from venue_features import calculate_venue_stats, calculate_team_venue_record
 
 
 def compute_team_recent_form(matches: pd.DataFrame, team: str, before_date, window: int = 5) -> dict:

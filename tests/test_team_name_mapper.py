@@ -7,9 +7,16 @@ HOW TO RUN:
     pytest tests/test_team_name_mapper.py -v
 """
 
+import os
+import sys
+
 import pytest
 
-from src.data_collection.team_name_mapper import (
+# Add project root and data_collection to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "data_collection")))
+
+from team_name_mapper import (
     standardise_team_name,
     get_short_code,
     apply_team_mapping,

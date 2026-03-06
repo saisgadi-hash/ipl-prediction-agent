@@ -28,9 +28,11 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.dirname(__file__))
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR
-from src.data_collection.team_name_mapper import apply_team_mapping
+from team_name_mapper import apply_team_mapping
 
 
 def parse_match_info(filepath: str) -> dict:

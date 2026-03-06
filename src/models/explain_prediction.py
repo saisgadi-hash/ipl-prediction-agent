@@ -31,9 +31,15 @@ import joblib
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "data_collection"))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "models"))
 from config import MODELS_DIR, PROCESSED_DATA_DIR
-from src.data_collection.team_name_mapper import standardise_team_name, get_short_code
+from team_name_mapper import standardise_team_name, get_short_code
+import __main__
+from train_model import IPLEnsemblePredictor
+__main__.IPLEnsemblePredictor = IPLEnsemblePredictor
 
 
 # ══════════════════════════════════════════
@@ -230,7 +236,7 @@ def explain_match_prediction(team1: str, team2: str, feature_vector: dict = None
 
     # Build features if not provided
     if feature_vector is None:
-        from src.models.predict import build_prediction_features
+        from predict import build_prediction_features
         feature_vector = build_prediction_features(team1, team2, None, None, None, feature_cols)
         if feature_vector is None:
             return {"error": "Could not build features for this matchup."}
