@@ -30,6 +30,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR
+from src.data_collection.team_name_mapper import apply_team_mapping
 
 
 def parse_match_info(filepath: str) -> dict:
@@ -218,6 +219,12 @@ def parse_all_ipl_matches():
     if "date" in matches_df.columns and len(matches_df) > 0:
         matches_df["date"] = pd.to_datetime(matches_df["date"], errors="coerce")
         matches_df = matches_df.sort_values("date").reset_index(drop=True)
+
+    # Standardise team names (e.g., "Delhi Daredevils" → "Delhi Capitals")
+    print("\nStandardising team names...")
+    matches_df = apply_team_mapping(matches_df, columns=["team1", "team2", "winner", "toss_winner"])
+    deliveries_df = apply_team_mapping(deliveries_df, columns=["batting_team"])
+    print("  Team names standardised!")
 
     # Save to CSV
     matches_path = PROCESSED_DATA_DIR / "matches.csv"

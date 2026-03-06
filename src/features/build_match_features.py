@@ -27,6 +27,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import PROCESSED_DATA_DIR, EXTERNAL_DATA_DIR, MODEL_CONFIG
+from src.data_collection.team_name_mapper import apply_team_mapping
 
 from src.features.player_form import calculate_batting_form, calculate_bowling_form
 from src.features.head_to_head import calculate_team_h2h
@@ -246,6 +247,10 @@ def build_all_match_features():
     matches = pd.read_csv(matches_path, parse_dates=["date"])
     deliveries = pd.read_csv(deliveries_path)
     print(f"  Loaded {len(matches)} matches, {len(deliveries):,} deliveries")
+
+    # Ensure team names are standardised
+    matches = apply_team_mapping(matches, columns=["team1", "team2", "winner", "toss_winner"])
+    deliveries = apply_team_mapping(deliveries, columns=["batting_team"])
 
     # Pre-compute venue stats (so we don't recalculate per match)
     print("\nPre-computing venue statistics...")

@@ -22,6 +22,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import PROCESSED_DATA_DIR, MODELS_DIR
+from src.data_collection.team_name_mapper import standardise_team_name, ACTIVE_TEAMS
 
 
 def load_model():
@@ -59,6 +60,12 @@ def predict_match(
     Returns:
         Dictionary with prediction details
     """
+    # Standardise team names so users can type old names like "Delhi Daredevils"
+    team1 = standardise_team_name(team1)
+    team2 = standardise_team_name(team2)
+    if toss_winner:
+        toss_winner = standardise_team_name(toss_winner)
+
     model, feature_cols = load_model()
     if model is None:
         return {"error": "Model not found. Train the model first."}
@@ -79,6 +86,18 @@ def predict_match(
     prediction["venue"] = venue or "TBD"
     prediction["toss_winner"] = toss_winner or "TBD"
     prediction["toss_decision"] = toss_decision or "TBD"
+
+    # Add SHAP-based justification
+    try:
+        from src.models.explain_prediction import explain_match_prediction
+        explanation = explain_match_prediction(team1, team2, feature_vector=features)
+        if "error" not in explanation:
+            prediction["justification"] = explanation["text_summary"]
+            prediction["top_factors"] = explanation["top_factors"]
+            prediction["chart_data"] = explanation.get("chart_data")
+    except Exception:
+        prediction["justification"] = "Justification unavailable (SHAP not loaded)."
+        prediction["top_factors"] = []
 
     return prediction
 
@@ -131,12 +150,7 @@ def predict_tournament_winner(teams: list = None) -> list:
         return []
 
     if teams is None:
-        teams = [
-            "Chennai Super Kings", "Mumbai Indians", "Royal Challengers Bengaluru",
-            "Kolkata Knight Riders", "Delhi Capitals", "Punjab Kings",
-            "Rajasthan Royals", "Sunrisers Hyderabad", "Lucknow Super Giants",
-            "Gujarat Titans",
-        ]
+        teams = ACTIVE_TEAMS.copy()
 
     # Calculate average win probability against all other teams
     team_scores = {}
@@ -187,3 +201,9 @@ if __name__ == "__main__":
         print(f"  {result.get('team1', 'Team 1')} Win Probability: {result.get('team1_win_probability', 0):.1%}")
         print(f"  {result.get('team2', 'Team 2')} Win Probability: {result.get('team2_win_probability', 0):.1%}")
         print(f"  Confidence: {result.get('confidence', 0):.0f}%")
+
+        # Show justification
+        if result.get("justification"):
+            print(f"\n{'='*50}")
+            print(result["justification"])
+            print(f"{'='*50}")
