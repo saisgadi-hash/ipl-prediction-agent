@@ -37,6 +37,9 @@ from team_name_mapper import apply_team_mapping
 from player_form import calculate_batting_form, calculate_bowling_form
 from head_to_head import calculate_team_h2h
 from venue_features import calculate_venue_stats, calculate_team_venue_record
+from expert_nlp import calculate_expert_sentiment
+from elo_ratings import calculate_elo, estimate_kalman_strength
+from hmm_form import calculate_hmm_state
 
 
 def compute_team_recent_form(matches: pd.DataFrame, team: str, before_date, window: int = 5) -> dict:
@@ -213,6 +216,25 @@ def build_features_for_match(
 
     # ── 7. Match Context ──
     features["match_number_in_season"] = stand1["season_matches_played"] + stand2["season_matches_played"]
+    
+    # ── Phase B Advanced Features ──
+    # B1: Expert NLP Sentiment
+    features["team1_expert_sentiment"] = round(calculate_expert_sentiment(team1), 4)
+    features["team2_expert_sentiment"] = round(calculate_expert_sentiment(team2), 4)
+    
+    # B3: Elo Ratings & Kalman Strength
+    # Pass all matches so calculate_elo has access to historical outcomes
+    features["team1_elo"] = calculate_elo(matches_df, team1, match_date, k=32)
+    features["team2_elo"] = calculate_elo(matches_df, team2, match_date, k=32)
+    features["elo_diff"] = features["team1_elo"] - features["team2_elo"]
+    
+    features["team1_kalman_strength"] = estimate_kalman_strength(matches_df, team1, match_date)
+    features["team2_kalman_strength"] = estimate_kalman_strength(matches_df, team2, match_date)
+    features["kalman_strength_diff"] = features["team1_kalman_strength"] - features["team2_kalman_strength"]
+    
+    # B5: HMM Form States (0=Cold, 1=Normal, 2=Hot)
+    features["team1_hmm_state"] = calculate_hmm_state(matches_df, team1, match_date)
+    features["team2_hmm_state"] = calculate_hmm_state(matches_df, team2, match_date)
 
     # ── 8. Target variable ──
     features["team1_won"] = 1 if match.get("winner") == team1 else 0

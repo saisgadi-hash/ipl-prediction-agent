@@ -56,6 +56,7 @@ def predict_match(
     venue: str = None,
     toss_winner: str = None,
     toss_decision: str = None,
+    skip_llm: bool = False,
 ) -> dict:
     """
     Predict the outcome of a match between two teams.
@@ -108,6 +109,24 @@ def predict_match(
     except Exception:
         prediction["justification"] = "Justification unavailable (SHAP not loaded)."
         prediction["top_factors"] = []
+        
+    # Add Phase B LLM Insights
+    if not skip_llm:
+        try:
+            from llm_analysis import get_llm_match_analysis
+            
+            # Build a small context dict for the LLM
+            context = {
+                "venue": prediction["venue"],
+                "model_predicted_winner": prediction.get('predicted_winner', 'Unknown'),
+                "team1_win_prob": f"{prediction.get('team1_win_probability', 0):.1%}",
+                "team2_win_prob": f"{prediction.get('team2_win_probability', 0):.1%}",
+            }
+            
+            llm_insight = get_llm_match_analysis(team1, team2, context)
+            prediction["llm_insight"] = llm_insight
+        except Exception as e:
+            prediction["llm_insight"] = f"LLM Insight unavailable: {str(e)}"
 
     return prediction
 
@@ -170,7 +189,8 @@ def predict_tournament_winner(teams: list = None) -> list:
         for opponent in teams:
             if opponent == team:
                 continue
-            result = predict_match(team, opponent)
+            # Skip LLM for tournament predictions to avoid API rate limits
+            result = predict_match(team, opponent, skip_llm=True)
             if "error" not in result:
                 total_prob += result["team1_win_probability"]
                 matches += 1
@@ -215,5 +235,14 @@ if __name__ == "__main__":
         # Show justification
         if result.get("justification"):
             print(f"\n{'='*50}")
+            print("STATISTICAL JUSTIFICATION (SHAP)")
+            print(f"{'-'*50}")
             print(result["justification"])
+            
+        # Show LLM Insight
+        if result.get("llm_insight"):
+            print(f"\n{'='*50}")
+            print("AI TACTICAL PREVIEW (LLM)")
+            print(f"{'-'*50}")
+            print(result["llm_insight"])
             print(f"{'='*50}")
