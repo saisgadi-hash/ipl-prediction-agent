@@ -8,15 +8,17 @@ build/
 venv/
 .venv/
 
-# Data (large files - download fresh via scripts)
+# Raw data (large files - download fresh via scripts)
 data/raw/*.zip
 data/raw/ipl_matches/
 data/raw/t20i_matches/
 data/raw/other_leagues/
 
-# Models (large files)
-models/*.pkl
-models/*.joblib
+# Processed data is included for Railway deployment
+
+# Models (included in repo for Railway deployment - only 2.5MB)
+# models/*.pkl
+# models/*.joblib
 models/*.bin
 
 # MLflow
