@@ -1,5 +1,11 @@
 /// Data models for API responses.
 
+/// Normalise a value to 0-1 range (handles both 0.65 and 65.0 formats)
+double _normalise(dynamic val) {
+  final v = (val ?? 0.5).toDouble();
+  return v > 1.0 ? v / 100.0 : v;
+}
+
 class MatchPrediction {
   final String predictedWinner;
   final double winProbability;
@@ -28,8 +34,8 @@ class MatchPrediction {
     }
     return MatchPrediction(
       predictedWinner: json['predicted_winner'] ?? json['winner'] ?? 'Unknown',
-      winProbability: (json['win_probability'] ?? json['probability'] ?? 0.5).toDouble(),
-      confidence: (json['confidence'] ?? 0.5).toDouble(),
+      winProbability: _normalise(json['win_probability'] ?? json['probability'] ?? 0.5),
+      confidence: _normalise(json['confidence'] ?? 0.5),
       team1: json['team1'] ?? '',
       team2: json['team2'] ?? '',
       justification: json['justification'],

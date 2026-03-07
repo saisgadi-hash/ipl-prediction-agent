@@ -40,35 +40,35 @@ st.set_page_config(
 
 # ── Team Colors (official IPL team colors) ──
 TEAM_COLORS = {
-    "Chennai Super Kings": "#FFCB05",
-    "Mumbai Indians": "#004BA0",
-    "Royal Challengers Bengaluru": "#EC1C24",
-    "Kolkata Knight Riders": "#3A225D",
-    "Delhi Capitals": "#004C93",
-    "Punjab Kings": "#ED1B24",
-    "Rajasthan Royals": "#EA1A85",
-    "Sunrisers Hyderabad": "#FF822A",
-    "Lucknow Super Giants": "#A72056",
-    "Gujarat Titans": "#1C1C1C",
-    "Rising Pune Supergiant": "#6F2C91",
+    "Chennai Super Kings": "#F5A623",
+    "Mumbai Indians": "#0984E3",
+    "Royal Challengers Bengaluru": "#E74C3C",
+    "Kolkata Knight Riders": "#8E44AD",
+    "Delhi Capitals": "#2980B9",
+    "Punjab Kings": "#E74C3C",
+    "Rajasthan Royals": "#E84393",
+    "Sunrisers Hyderabad": "#F39C12",
+    "Lucknow Super Giants": "#00CEC9",
+    "Gujarat Titans": "#636E72",
+    "Rising Pune Supergiant": "#8E44AD",
     "Pune Warriors": "#2F9BE3",
-    "Deccan Chargers": "#B0B0B0",
-    "Kochi Tuskers Kerala": "#6F2C91",
-    "Gujarat Lions": "#E04F16",
+    "Deccan Chargers": "#95A5A6",
+    "Kochi Tuskers Kerala": "#8E44AD",
+    "Gujarat Lions": "#E67E22",
 }
 
-# Secondary accent colors for gradients
+# Light tints for card backgrounds
 TEAM_COLORS_LIGHT = {
-    "Chennai Super Kings": "#FFF3C4",
-    "Mumbai Indians": "#A8D0F0",
-    "Royal Challengers Bengaluru": "#F8A0A4",
-    "Kolkata Knight Riders": "#C4A8E0",
-    "Delhi Capitals": "#A0C4E8",
-    "Punjab Kings": "#F8A0A4",
-    "Rajasthan Royals": "#F0A0D0",
-    "Sunrisers Hyderabad": "#FFD0A0",
-    "Lucknow Super Giants": "#D0A0B8",
-    "Gujarat Titans": "#808080",
+    "Chennai Super Kings": "#FEF3E0",
+    "Mumbai Indians": "#E3F2FD",
+    "Royal Challengers Bengaluru": "#FFEBEE",
+    "Kolkata Knight Riders": "#F3E5F5",
+    "Delhi Capitals": "#E1F5FE",
+    "Punjab Kings": "#FFEBEE",
+    "Rajasthan Royals": "#FCE4EC",
+    "Sunrisers Hyderabad": "#FFF8E1",
+    "Lucknow Super Giants": "#E0F7FA",
+    "Gujarat Titans": "#ECEFF1",
 }
 
 
@@ -104,276 +104,185 @@ st.markdown("""
     /* ── Global Reset ── */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
-    /* ── Background (Facebook Light Gray) ── */
+    /* ── Background ── */
     .stApp {
-        background: #F0F2F5;
+        background: linear-gradient(135deg, #FAFBFE 0%, #F0F4FF 50%, #FFF5F5 100%);
     }
 
     /* ── Sidebar ── */
     section[data-testid="stSidebar"] {
         background: #FFFFFF;
-        border-right: 1px solid #E4E6EB;
+        border-right: 1px solid rgba(108, 92, 231, 0.08);
+        box-shadow: 2px 0 20px rgba(108, 92, 231, 0.04);
     }
-    section[data-testid="stSidebar"] * {
-        color: #4B4F56 !important;
-    }
+    section[data-testid="stSidebar"] * { color: #4A5568 !important; }
 
-    /* ── Typography (Darker text for readability) ── */
+    /* ── Typography ── */
     h1, h2, h3, h4, h5, h6 {
-        color: #1C1E21 !important;
-        font-weight: 800;
+        color: #2D3748 !important;
+        font-weight: 700;
         letter-spacing: -0.02em;
     }
-    h1 {
-        font-size: 2.2rem !important;
-    }
-    
-    /* ── Global Text Colors for Light Theme ── */
-    p, span, div, label, li {
-        color: #4B4F56;
-    }
-    
-    /* Override for specific Streamlit text elements that get stuck in dark mode */
-    .stMarkdown p, .stMarkdown span, .stText p {
-        color: #1C1E21 !important;
-    }
+    h1 { font-size: 2.2rem !important; }
+    p, span, div, label, li { color: #4A5568; }
+    .stMarkdown p, .stMarkdown span, .stText p { color: #2D3748 !important; }
     .stRadio label, .stSelectbox label, .stTextInput label, .stTextArea label, .stNumberInput label {
-        color: #1C1E21 !important;
-        font-weight: 600 !important;
+        color: #2D3748 !important; font-weight: 600 !important;
     }
 
-    /* ── Metric Cards ── */
+    /* ── Metric Cards (each gets a unique colour via inline style) ── */
     div[data-testid="stMetric"] {
         background: #FFFFFF;
-        border: 1px solid #E4E6EB;
-        border-radius: 12px;
-        padding: 20px 16px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        transition: all 0.2s ease-in-out;
+        border: none;
+        border-radius: 16px;
+        padding: 22px 18px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+        transition: all 0.25s ease;
+        border-top: 3px solid #6C5CE7;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-3px) scale(1.01);
+        box-shadow: 0 8px 25px rgba(108, 92, 231, 0.12);
     }
     div[data-testid="stMetric"] label {
-        color: #65676B;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-weight: 600;
+        color: #718096; font-size: 11px; text-transform: uppercase;
+        letter-spacing: 0.1em; font-weight: 700;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #1C1E21;
-        font-size: 28px;
-        font-weight: 800;
+        color: #2D3748; font-size: 28px; font-weight: 800;
     }
 
-    /* ── Buttons (Instagram + Google Primary) ── */
+    /* ── Buttons ── */
     .stButton > button {
-        /* Instagram-style gradient for main actions */
-        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        padding: 0.7rem 1.4rem;
-        transition: all 0.2s ease;
+        background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+        color: white; border: none; border-radius: 12px;
+        font-weight: 600; padding: 0.7rem 1.6rem;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 15px rgba(108, 92, 231, 0.25);
     }
     .stButton > button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(220, 39, 67, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(108, 92, 231, 0.35);
+        background: linear-gradient(135deg, #5B4BD5, #8B7FF0);
     }
 
     /* ── Select boxes ── */
     .stSelectbox > div > div {
-        background: #FFFFFF;
-        border: 1px solid #CED0D4;
-        border-radius: 8px;
-        color: #1C1E21;
+        background: #FFFFFF; border: 2px solid #EDF2F7;
+        border-radius: 12px; color: #2D3748;
+        transition: border-color 0.2s ease;
     }
+    .stSelectbox > div > div:focus-within { border-color: #6C5CE7; }
 
     /* ── Tabs ── */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: transparent;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 6px; background: transparent; }
     .stTabs [data-baseweb="tab"] {
-        background: #FFFFFF;
-        border-radius: 8px;
-        color: #65676B;
-        border: 1px solid #E4E6EB;
-        padding: 8px 16px;
+        background: #FFFFFF; border-radius: 10px; color: #718096;
+        border: 1px solid #EDF2F7; padding: 8px 18px; font-weight: 500;
     }
     .stTabs [aria-selected="true"] {
-        /* Facebook Blue for active tabs */
-        background: #1877F2;
-        color: white !important;
-        border-color: transparent;
+        background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+        color: white !important; border-color: transparent;
+        box-shadow: 0 3px 12px rgba(108, 92, 231, 0.2);
     }
 
-    /* ── Custom Components ── */
+    /* ── Glass Card ── */
     .glass-card {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid #E4E6EB;
-        border-radius: 16px;
-        padding: 24px;
-        margin: 10px 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(108, 92, 231, 0.06);
+        border-radius: 18px; padding: 24px; margin: 10px 0;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s ease;
     }
     .glass-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(108, 92, 231, 0.08);
     }
 
+    /* ── Gradient Text ── */
     .gradient-text {
-        /* Google Colors Gradient */
-        background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        background: linear-gradient(135deg, #6C5CE7, #00B894, #FDCB6E, #E17055);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         font-weight: 800;
     }
 
+    /* ── Accent Line ── */
     .accent-line {
-        width: 40px;
-        height: 4px;
-        /* Google Colors */
-        background: linear-gradient(90deg, #4285F4 25%, #EA4335 25%, #EA4335 50%, #FBBC05 50%, #FBBC05 75%, #34A853 75%);
-        border-radius: 2px;
-        margin-bottom: 12px;
+        width: 50px; height: 4px;
+        background: linear-gradient(90deg, #6C5CE7, #00B894, #FDCB6E, #E17055);
+        border-radius: 2px; margin-bottom: 16px;
     }
 
-    .divider {
-        border: none;
-        height: 1px;
-        background: #E4E6EB;
-        margin: 32px 0;
-    }
+    .divider { border: none; height: 1px; background: linear-gradient(90deg, transparent, #E2E8F0, transparent); margin: 32px 0; }
 
+    /* ── Match Result Card ── */
     .match-result-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #FFFFFF;
-        border-radius: 8px;
-        padding: 12px 18px;
-        margin: 6px 0;
+        display: flex; justify-content: space-between; align-items: center;
+        background: #FFFFFF; border-radius: 12px; padding: 14px 20px; margin: 6px 0;
         border-left: 4px solid transparent;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 6px rgba(0,0,0,0.03);
         transition: all 0.2s ease;
     }
-    .match-result-card:hover {
-        background: #F8F9FA;
-    }
+    .match-result-card:hover { background: #FAFBFE; transform: translateX(4px); }
 
-    .badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-    .badge-win {
-        /* Google Green */
-        background: rgba(52, 168, 83, 0.1);
-        color: #34A853;
-        border: 1px solid rgba(52, 168, 83, 0.2);
-    }
-    .badge-loss {
-        /* Google Red */
-        background: rgba(234, 67, 53, 0.1);
-        color: #EA4335;
-        border: 1px solid rgba(234, 67, 53, 0.2);
-    }
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
+    .badge-win { background: linear-gradient(135deg, rgba(0,184,148,0.1), rgba(0,184,148,0.05)); color: #00B894; border: 1px solid rgba(0,184,148,0.2); }
+    .badge-loss { background: linear-gradient(135deg, rgba(225,112,85,0.1), rgba(225,112,85,0.05)); color: #E17055; border: 1px solid rgba(225,112,85,0.2); }
 
     .winner-badge-large {
-        /* Facebook Green for success */
-        background: #42B72A;
-        color: white;
-        padding: 10px 28px;
-        border-radius: 24px;
-        font-weight: 700;
-        font-size: 16px;
-        display: inline-block;
-        margin-top: 16px;
-        box-shadow: 0 2px 8px rgba(66, 183, 42, 0.3);
+        background: linear-gradient(135deg, #00B894, #55EFC4);
+        color: white; padding: 12px 32px; border-radius: 28px;
+        font-weight: 700; font-size: 16px; display: inline-block; margin-top: 16px;
+        box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
     }
 
+    /* ── Info Box ── */
     .info-box {
-        /* Facebook Blue tint */
-        background: #E7F3FF;
-        border-left: 3px solid #1877F2;
-        padding: 16px 20px;
-        border-radius: 0 8px 8px 0;
-        color: #1C1E21;
-        margin: 16px 0;
-        font-size: 14px;
+        background: linear-gradient(135deg, #EBF5FF, #F0E6FF);
+        border-left: 3px solid #6C5CE7;
+        padding: 16px 20px; border-radius: 0 12px 12px 0;
+        color: #2D3748; margin: 16px 0; font-size: 14px;
     }
 
     /* ── Justification Card ── */
     .justification-card {
-        background: #FFFFFF;
-        border: 1px solid #E4E6EB;
-        border-radius: 12px;
-        padding: 24px;
-        margin: 16px 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        background: #FFFFFF; border: 1px solid #EDF2F7;
+        border-radius: 16px; padding: 24px; margin: 16px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
-    .factor-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 0;
-        border-bottom: 1px solid #F0F2F5;
-    }
+    .factor-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #F7FAFC; }
     .factor-row:last-child { border-bottom: none; }
-    .factor-icon {
-        width: 32px; height: 32px;
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 14px; font-weight: 700;
-    }
-    .factor-positive { background: rgba(52, 168, 83, 0.1); color: #34A853; }
-    .factor-negative { background: rgba(234, 67, 53, 0.1); color: #EA4335; }
-    .factor-text { color: #1C1E21; font-size: 14px; flex: 1; }
-    .factor-value { color: #65676B; font-size: 12px; font-weight: 600; min-width: 60px; text-align: right; }
+    .factor-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .factor-positive { background: rgba(0, 184, 148, 0.1); color: #00B894; }
+    .factor-negative { background: rgba(225, 112, 85, 0.1); color: #E17055; }
+    .factor-text { color: #2D3748; font-size: 14px; flex: 1; }
+    .factor-value { color: #718096; font-size: 12px; font-weight: 700; min-width: 60px; text-align: right; }
 
     /* ── Gamification ── */
     .badge-earned {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        /* Google Blue */
-        background: rgba(66, 133, 244, 0.1);
-        border: 1px solid rgba(66, 133, 244, 0.2);
-        border-radius: 20px;
-        padding: 6px 14px;
-        font-size: 13px;
-        color: #4285F4;
-        margin: 4px;
+        display: inline-flex; align-items: center; gap: 6px;
+        background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(162,155,254,0.05));
+        border: 1px solid rgba(108,92,231,0.15); border-radius: 22px;
+        padding: 7px 16px; font-size: 13px; color: #6C5CE7; margin: 4px; font-weight: 600;
     }
 
     .points-display {
-        background: #FFFFFF;
-        border: 1px solid #E4E6EB;
-        border-radius: 12px;
-        padding: 12px 20px;
-        text-align: center;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+        border: none; border-radius: 14px; padding: 14px 20px;
+        text-align: center; color: white !important;
+        box-shadow: 0 4px 15px rgba(108,92,231,0.2);
     }
+    .points-display * { color: white !important; }
 
     /* ── Animations ── */
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-in { animation: fadeInUp 0.4s ease-out forwards; }
+    @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -415,18 +324,24 @@ def load_data():
 # ══════════════════════════════════════════
 
 def apply_light_theme(fig, height=350):
-    """Apply consistent light theme to any Plotly figure."""
+    """Apply consistent clean & colourful theme to any Plotly figure."""
     fig.update_layout(
         height=height,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#1C1E21", family="Inter", size=12),
-        xaxis=dict(gridcolor="#E4E6EB", zerolinecolor="#CED0D4", tickfont=dict(color="#4B4F56")),
-        yaxis=dict(gridcolor="#E4E6EB", zerolinecolor="#CED0D4", tickfont=dict(color="#4B4F56")),
+        font=dict(color="#2D3748", family="Inter", size=13),
+        xaxis=dict(gridcolor="#F0F4FF", zerolinecolor="#E2E8F0", tickfont=dict(color="#718096", size=11)),
+        yaxis=dict(gridcolor="#F0F4FF", zerolinecolor="#E2E8F0", tickfont=dict(color="#718096", size=11)),
         margin=dict(l=40, r=20, t=40, b=30),
-        legend=dict(font=dict(color="#1C1E21")),
+        legend=dict(font=dict(color="#2D3748", size=12)),
     )
     return fig
+
+
+# Vibrant colour palette for charts
+CHART_COLORS = ["#6C5CE7", "#00B894", "#FDCB6E", "#E17055", "#74B9FF",
+                "#A29BFE", "#55EFC4", "#FFEAA7", "#FAB1A0", "#81ECEC",
+                "#FF7675", "#FD79A8", "#0984E3", "#00CEC9", "#E84393"]
 
 
 # ══════════════════════════════════════════

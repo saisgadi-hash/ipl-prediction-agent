@@ -115,7 +115,7 @@ class _TournamentScreenState extends State<TournamentScreen> {
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: 5,
-                          getDrawingHorizontalLine: (value) => const FlLine(color: Color(0xFF1E1E3A), strokeWidth: 0.5),
+                          getDrawingHorizontalLine: (value) => FlLine(color: AppTheme.border, strokeWidth: 0.5),
                         ),
                         borderData: FlBorderData(show: false),
                       ),

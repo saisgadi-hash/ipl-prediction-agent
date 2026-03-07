@@ -45,7 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFF2A2A4A)),
+                        borderSide: const BorderSide(color: AppTheme.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -99,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: const Text('View Source on GitHub'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.textPrimary,
-                        side: const BorderSide(color: Color(0xFF2A2A4A)),
+                        side: const BorderSide(color: AppTheme.border),
                       ),
                     ),
                   ),
@@ -113,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             GlassCard(
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.open_in_browser, color: AppTheme.accentPink),
+                leading: const Icon(Icons.open_in_browser, color: AppTheme.coral),
                 title: Text('Open Web Dashboard', style: Theme.of(context).textTheme.titleMedium),
                 subtitle: Text('ipl-ai-prediction.up.railway.app', style: Theme.of(context).textTheme.bodySmall),
                 trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
