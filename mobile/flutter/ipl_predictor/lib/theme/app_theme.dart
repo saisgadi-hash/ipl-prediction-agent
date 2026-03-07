@@ -31,7 +31,7 @@ class AppTheme {
       bodyMedium: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400, color: textSecondary),
       bodySmall: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400, color: textSecondary),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: card,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -55,15 +55,15 @@ class AppTheme {
   // Team colours
   static const Map<String, Color> teamColors = {
     'Chennai Super Kings': Color(0xFFFFD700),
-    'Mumbai Indians': Color(0xFF004BA0),
+    'Mumbai Indians': Color(0xFF1A8FE3),
     'Royal Challengers Bengaluru': Color(0xFFEC1C24),
-    'Kolkata Knight Riders': Color(0xFF3A225D),
-    'Delhi Capitals': Color(0xFF004C93),
+    'Kolkata Knight Riders': Color(0xFF7B5EA7),
+    'Delhi Capitals': Color(0xFF4A9FE5),
     'Punjab Kings': Color(0xFFED1B24),
     'Rajasthan Royals': Color(0xFFEA1A85),
     'Sunrisers Hyderabad': Color(0xFFF26522),
     'Lucknow Super Giants': Color(0xFF00AEEF),
-    'Gujarat Titans': Color(0xFF1B2133),
+    'Gujarat Titans': Color(0xFF6B8BB5),
   };
 
   static Color getTeamColor(String team) => teamColors[team] ?? accent;
