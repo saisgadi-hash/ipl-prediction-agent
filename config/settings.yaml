@@ -206,7 +206,7 @@ live_feeds:
     daily_limit: 90          # Free tier: 100/day, leave 10 buffer
     cache_ttl_seconds: 15    # Cache responses for 15s
     poll_interval_seconds: 30 # Poll every 30s during live match
-    # API key stored in .env as CRICAPI_KEY
+    # API key stored in .env as CRICAPI_KEY (sign up at cricketdata.org)
 
   odds_api:
     base_url: "https://api.the-odds-api.com/v4"

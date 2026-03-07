@@ -1,5 +1,5 @@
 """
-Phase D: Live Score Collector — CricAPI Integration
+Phase D: Live Score Collector — CricketData.org (formerly CricAPI) Integration
 Fetches real-time match scores during live IPL matches.
 
 Free tier: 100 requests/day. We track ONE match at a time,
@@ -12,7 +12,7 @@ HOW TO USE:
     state = collector.get_match_state(match_id)
 
 SETUP:
-    1. Sign up at https://cricapi.com (free)
+    1. Sign up at https://cricketdata.org (free)
     2. Add CRICAPI_KEY=your_key to .env file
 """
 
