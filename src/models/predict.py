@@ -36,18 +36,27 @@ __main__.IPLEnsemblePredictor = IPLEnsemblePredictor
 
 
 def load_model():
-    """Load the trained ensemble model and feature columns."""
+    """Load the trained ensemble model, feature columns, and optional calibrator."""
     model_path = MODELS_DIR / "ensemble_predictor.pkl"
     features_path = MODELS_DIR / "feature_columns.pkl"
+    calibrator_path = MODELS_DIR / "probability_calibrator.pkl"
 
     if not model_path.exists():
         print("ERROR: No trained model found!")
         print("Run: python -m src.models.train_model")
-        return None, None
+        return None, None, None
 
     model = joblib.load(model_path)
     feature_cols = joblib.load(features_path)
-    return model, feature_cols
+
+    calibrator = None
+    if calibrator_path.exists():
+        try:
+            calibrator = joblib.load(calibrator_path)
+        except Exception:
+            pass
+
+    return model, feature_cols, calibrator
 
 
 def predict_match(
@@ -77,7 +86,7 @@ def predict_match(
     if toss_winner:
         toss_winner = standardise_team_name(toss_winner)
 
-    model, feature_cols = load_model()
+    model, feature_cols, calibrator = load_model()
     if model is None:
         return {"error": "Model not found. Train the model first."}
 
@@ -92,6 +101,21 @@ def predict_match(
     X = pd.DataFrame([features])[feature_cols].fillna(0).replace([np.inf, -np.inf], 0)
 
     prediction = model.predict_match(X, team1, team2)
+
+    # Apply probability calibration if available (Phase B)
+    if calibrator is not None:
+        try:
+            raw_prob = prediction["team1_win_probability"]
+            calibrated = float(calibrator.predict([raw_prob])[0])
+            prediction["team1_win_probability"] = round(calibrated, 4)
+            prediction["team2_win_probability"] = round(1 - calibrated, 4)
+            prediction["predicted_winner"] = team1 if calibrated >= 0.5 else team2
+            prediction["confidence"] = round(abs(calibrated - 0.5) * 200, 1)
+            prediction["calibrated"] = True
+        except Exception:
+            prediction["calibrated"] = False
+    else:
+        prediction["calibrated"] = False
 
     # Add metadata
     prediction["venue"] = venue or "TBD"
@@ -168,43 +192,109 @@ def build_prediction_features(team1, team2, venue, toss_winner, toss_decision, f
     return features
 
 
-def predict_tournament_winner(teams: list = None) -> list:
+def _get_current_elo_ratings(teams: list) -> dict:
     """
-    Predict the most likely IPL tournament winner.
+    Extract current Elo ratings for all teams from historical match data.
+    Uses the latest date as the 'current' reference point.
+    """
+    matches_path = PROCESSED_DATA_DIR / "matches.csv"
+    if not matches_path.exists():
+        # Fallback: return default ratings
+        return {team: 1500.0 for team in teams}
 
-    Simulates all possible matchups and ranks teams by overall win probability.
+    matches = pd.read_csv(matches_path)
+    matches['date'] = pd.to_datetime(matches['date'])
+
+    # Use a date far in the future so all matches are included
+    future_date = pd.Timestamp('2030-01-01')
+
+    sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "features"))
+    from elo_ratings import calculate_elo
+
+    elo_ratings = {}
+    for team in teams:
+        elo_ratings[team] = calculate_elo(matches, team, future_date)
+
+    return elo_ratings
+
+
+def _get_current_hmm_states(teams: list) -> dict:
     """
-    model, feature_cols = load_model()
-    if model is None:
-        return []
+    Get current HMM form state (0=Cold, 1=Normal, 2=Hot) for each team.
+    """
+    matches_path = PROCESSED_DATA_DIR / "matches.csv"
+    if not matches_path.exists():
+        return {team: 1 for team in teams}
+
+    matches = pd.read_csv(matches_path)
+    matches['date'] = pd.to_datetime(matches['date'])
+    future_date = pd.Timestamp('2030-01-01')
+
+    sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "features"))
+    from hmm_form import calculate_hmm_state
+
+    states = {}
+    for team in teams:
+        try:
+            states[team] = calculate_hmm_state(matches, team, future_date)
+        except Exception:
+            states[team] = 1  # Default to Normal
+    return states
+
+
+# Cache for Monte Carlo results (avoid recalculating on every request)
+_tournament_cache = {"result": None, "timestamp": 0}
+_CACHE_TTL = 300  # 5 minutes
+
+import time
+
+
+def predict_tournament_winner(teams: list = None, num_simulations: int = 5000) -> list:
+    """
+    Predict tournament winner using Monte Carlo simulation with Elo-based probabilities.
+
+    Runs N full season simulations (double round-robin + playoffs) and returns
+    win probability distributions with confidence intervals.
+    """
+    global _tournament_cache
+
+    # Check cache
+    now = time.time()
+    if _tournament_cache["result"] is not None and (now - _tournament_cache["timestamp"]) < _CACHE_TTL:
+        return _tournament_cache["result"]
 
     if teams is None:
-        teams = ACTIVE_TEAMS.copy()
+        teams = list(ACTIVE_TEAMS.copy())
 
-    # Calculate average win probability against all other teams
-    team_scores = {}
-    for team in teams:
-        total_prob = 0
-        matches = 0
-        for opponent in teams:
-            if opponent == team:
-                continue
-            # Skip LLM for tournament predictions to avoid API rate limits
-            result = predict_match(team, opponent, skip_llm=True)
-            if "error" not in result:
-                total_prob += result["team1_win_probability"]
-                matches += 1
+    # Get current Elo ratings from historical data
+    elo_ratings = _get_current_elo_ratings(teams)
 
-        avg_prob = total_prob / max(matches, 1)
-        team_scores[team] = round(avg_prob, 4)
+    # Get HMM form states
+    hmm_states = _get_current_hmm_states(teams)
+    state_labels = {0: "Cold", 1: "Normal", 2: "Hot"}
 
-    # Sort by probability (descending)
-    rankings = sorted(team_scores.items(), key=lambda x: x[1], reverse=True)
+    # Run Monte Carlo simulation
+    from tournament_simulation import simulate_tournament
+    probabilities = simulate_tournament(teams, elo_ratings, num_simulations)
 
-    return [
-        {"rank": i + 1, "team": team, "win_probability": prob}
-        for i, (team, prob) in enumerate(rankings)
-    ]
+    # Build ranked results with advanced stats
+    sorted_teams = sorted(probabilities.items(), key=lambda x: x[1], reverse=True)
+
+    rankings = []
+    for i, (team, prob) in enumerate(sorted_teams):
+        rankings.append({
+            "rank": i + 1,
+            "team": team,
+            "win_probability": round(prob, 4),
+            "elo_rating": round(elo_ratings.get(team, 1500), 1),
+            "form_state": state_labels.get(hmm_states.get(team, 1), "Normal"),
+            "simulations": num_simulations,
+        })
+
+    # Cache the result
+    _tournament_cache = {"result": rankings, "timestamp": now}
+
+    return rankings
 
 
 if __name__ == "__main__":

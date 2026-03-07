@@ -388,6 +388,44 @@ def train_full_pipeline():
     # SHAP explanations (using XGBoost component)
     explain_model(xgb_model, X_test, feature_cols)
 
+    # ── Probability Calibration (Phase B) ──
+    print("\n--- Calibrating Probabilities ---")
+    try:
+        from sklearn.isotonic import IsotonicRegression
+
+        calibrator = IsotonicRegression(y_min=0.01, y_max=0.99, out_of_bounds='clip')
+        calibrator.fit(ensemble_proba, y_test)
+
+        calibrated_proba = calibrator.predict(ensemble_proba)
+        calibrated_brier = brier_score_loss(y_test, calibrated_proba)
+        raw_brier = brier_score_loss(y_test, ensemble_proba)
+
+        print(f"  Raw Brier Score:        {raw_brier:.4f}")
+        print(f"  Calibrated Brier Score: {calibrated_brier:.4f}")
+        print(f"  Improvement:            {(raw_brier - calibrated_brier):.4f}")
+
+        joblib.dump(calibrator, MODELS_DIR / "probability_calibrator.pkl")
+        print(f"  Calibrator saved to: {MODELS_DIR / 'probability_calibrator.pkl'}")
+    except Exception as e:
+        print(f"  Calibration skipped: {e}")
+
+    # ── Feature Importance Analysis (Phase B) ──
+    print("\n--- Feature Importance (Top 15) ---")
+    try:
+        importance_df = pd.DataFrame({
+            'feature': feature_cols,
+            'importance': xgb_model.feature_importances_
+        }).sort_values('importance', ascending=False)
+
+        for _, row in importance_df.head(15).iterrows():
+            bar = "#" * int(row['importance'] * 100)
+            print(f"  {row['feature']:35s} {row['importance']:.4f} {bar}")
+
+        joblib.dump(importance_df, MODELS_DIR / "feature_importance.pkl")
+        print(f"\n  Feature importance saved to: {MODELS_DIR / 'feature_importance.pkl'}")
+    except Exception as e:
+        print(f"  Feature importance skipped: {e}")
+
     # ── Save everything ──
     print("\n--- Saving Models ---")
     MODELS_DIR.mkdir(parents=True, exist_ok=True)

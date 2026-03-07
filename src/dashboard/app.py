@@ -774,42 +774,114 @@ def show_match_predictor(data):
 def show_tournament_rankings(data):
     st.markdown('<div class="accent-line"></div>', unsafe_allow_html=True)
     st.markdown("# Tournament Predictions")
-    st.markdown('<p style="color: #6B7280;">AI-ranked probability of winning IPL 2026</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #6B7280;">Monte Carlo simulation — 5,000 full season simulations with Elo-based probabilities</p>', unsafe_allow_html=True)
 
-    if st.button("Generate Rankings", type="primary"):
+    if st.button("Run Monte Carlo Simulation", type="primary"):
         try:
             from predict import predict_tournament_winner
-            with st.spinner("Simulating all matchups..."):
+            with st.spinner("Running 5,000 season simulations..."):
                 rankings = predict_tournament_winner()
 
             if rankings:
+                # ── Monte Carlo Rankings ──
+                st.markdown("### Win Probability Rankings")
                 for r in rankings:
                     team = r["team"]
                     prob = r["win_probability"]
                     rank = r["rank"]
                     color = get_team_color(team)
+                    light_color = TEAM_COLORS_LIGHT.get(team, "#F0F4FF")
                     short = get_short_code(team)
+                    elo = r.get("elo_rating", 1500)
+                    form = r.get("form_state", "Normal")
+                    form_icon = {"Hot": "🔥", "Normal": "⚡", "Cold": "❄️"}.get(form, "⚡")
 
                     medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(rank, f"<span style='color:#6B7280;font-weight:600;'>#{rank}</span>")
                     bar_pct = prob * 100
 
                     st.markdown(f"""
                     <div style="display:flex; align-items:center; gap:14px;
-                                background:rgba(20,24,36,0.8); border-radius:12px; padding:14px 20px; margin:6px 0;
+                                background:{light_color}; border-radius:12px; padding:14px 20px; margin:6px 0;
                                 border-left: 3px solid {color};">
                         <span style="font-size:18px; min-width:32px; text-align:center;">{medal}</span>
                         <span style="color:{color}; font-weight:700; font-size:15px; min-width:48px;">{short}</span>
-                        <div style="flex:1; background:rgba(255,255,255,0.04); border-radius:6px; height:20px; overflow:hidden;">
-                            <div style="width:{bar_pct}%; height:100%; background:linear-gradient(90deg, {color}, {color}66);
+                        <div style="flex:1; background:rgba(0,0,0,0.06); border-radius:6px; height:20px; overflow:hidden;">
+                            <div style="width:{bar_pct}%; height:100%; background:linear-gradient(90deg, {color}, {color}99);
                                         border-radius:6px;"></div>
                         </div>
-                        <span style="color:#1C1E21; font-weight:700; min-width:55px; text-align:right;">{prob:.1%}</span>
+                        <span style="color:#2D3748; font-weight:700; min-width:55px; text-align:right;">{prob:.1%}</span>
+                        <span style="font-size:12px; color:#6B7280; min-width:70px; text-align:right;">Elo {elo:.0f}</span>
+                        <span style="font-size:14px; min-width:24px;">{form_icon}</span>
                     </div>
                     """, unsafe_allow_html=True)
-        except Exception:
-            st.markdown('<div class="info-box">Train the model first: <code>python run_pipeline.py</code></div>', unsafe_allow_html=True)
+
+                # ── Bar Chart ──
+                st.markdown("### Monte Carlo Distribution")
+                import plotly.graph_objects as go
+                fig = go.Figure()
+                teams_sorted = [r["team"] for r in rankings]
+                probs_sorted = [r["win_probability"] * 100 for r in rankings]
+                colors_sorted = [get_team_color(t) for t in teams_sorted]
+
+                fig.add_trace(go.Bar(
+                    x=[get_short_code(t) for t in teams_sorted],
+                    y=probs_sorted,
+                    marker_color=colors_sorted,
+                    text=[f"{p:.1f}%" for p in probs_sorted],
+                    textposition="outside",
+                ))
+                apply_light_theme(fig)
+                fig.update_layout(
+                    title="Tournament Win Probability (5,000 simulations)",
+                    yaxis_title="Win Probability (%)",
+                    height=400,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # ── Elo Ratings Chart ──
+                st.markdown("### Elo Ratings")
+                elo_fig = go.Figure()
+                elos_sorted = [r.get("elo_rating", 1500) for r in rankings]
+                elo_fig.add_trace(go.Bar(
+                    x=[get_short_code(t) for t in teams_sorted],
+                    y=elos_sorted,
+                    marker_color=colors_sorted,
+                    text=[f"{e:.0f}" for e in elos_sorted],
+                    textposition="outside",
+                ))
+                apply_light_theme(elo_fig)
+                elo_fig.update_layout(
+                    title="Current Elo Ratings (higher = stronger)",
+                    yaxis_title="Elo Rating",
+                    yaxis_range=[min(elos_sorted) - 100, max(elos_sorted) + 100],
+                    height=400,
+                )
+                st.plotly_chart(elo_fig, use_container_width=True)
+
+                # ── Team Form States ──
+                st.markdown("### Team Form (HMM Analysis)")
+                st.markdown('<p style="color: #6B7280;">Hidden Markov Model detects whether a team is on a hot streak, normal form, or cold patch</p>', unsafe_allow_html=True)
+                cols = st.columns(5)
+                for i, r in enumerate(rankings):
+                    form = r.get("form_state", "Normal")
+                    form_color = {"Hot": "#00B894", "Normal": "#FDCB6E", "Cold": "#E17055"}.get(form, "#6B7280")
+                    form_icon = {"Hot": "🔥", "Normal": "⚡", "Cold": "❄️"}.get(form, "⚡")
+                    with cols[i % 5]:
+                        st.markdown(f"""
+                        <div style="text-align:center; padding:12px; background:white;
+                                    border-radius:12px; border:2px solid {form_color}; margin:4px 0;">
+                            <div style="font-size:24px;">{form_icon}</div>
+                            <div style="font-weight:700; color:{get_team_color(r['team'])}; font-size:13px; margin:4px 0;">
+                                {get_short_code(r['team'])}
+                            </div>
+                            <div style="font-weight:600; color:{form_color}; font-size:12px;">{form}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+        except Exception as e:
+            st.markdown(f'<div class="info-box">Error: {e}. Train the model first: <code>python run_pipeline.py</code></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="info-box">Click <strong>Generate Rankings</strong> to simulate matchups.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="info-box">Click <strong>Run Monte Carlo Simulation</strong> to simulate 5,000 full IPL seasons using Elo ratings.</div>', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════
@@ -964,6 +1036,32 @@ def show_model_performance(data):
         apply_light_theme(fig2, 350)
         fig2.update_layout(barmode="group", yaxis_title="Accuracy %")
         st.plotly_chart(fig2, use_container_width=True)
+
+    # ── Feature Importance (Phase B) ──
+    try:
+        import joblib as _jl
+        fi_path = MODELS_DIR / "feature_importance.pkl"
+        if fi_path.exists():
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+            st.markdown("### Feature Importance (XGBoost)")
+            st.markdown('<p style="color: #6B7280;">Top 15 features driving predictions — includes Phase B features (Elo, HMM, Kalman)</p>', unsafe_allow_html=True)
+
+            fi_df = _jl.load(fi_path).head(15).sort_values("importance", ascending=True)
+            fi_fig = go.Figure(go.Bar(
+                x=fi_df["importance"], y=fi_df["feature"], orientation="h",
+                marker_color=CHART_COLORS[:len(fi_df)],
+                text=[f"{v:.4f}" for v in fi_df["importance"]],
+                textposition="outside", textfont=dict(color="#2D3748", size=11),
+            ))
+            apply_light_theme(fi_fig, max(400, len(fi_df) * 28))
+            fi_fig.update_layout(
+                title="Feature Importance (higher = more influential)",
+                xaxis_title="Importance Score",
+                margin=dict(l=200),
+            )
+            st.plotly_chart(fi_fig, use_container_width=True)
+    except Exception:
+        pass
 
     if not metadata and backtest is None:
         st.markdown('<div class="info-box">Train the model: <code>python -m src.models.train_model</code></div>', unsafe_allow_html=True)

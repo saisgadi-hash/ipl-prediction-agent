@@ -71,14 +71,24 @@ class TeamRanking {
   final String team;
   final double winProbability;
   final int rank;
+  final double eloRating;
+  final String formState;
 
-  TeamRanking({required this.team, required this.winProbability, required this.rank});
+  TeamRanking({
+    required this.team,
+    required this.winProbability,
+    required this.rank,
+    this.eloRating = 1500.0,
+    this.formState = "Normal",
+  });
 
   factory TeamRanking.fromJson(Map<String, dynamic> json, int rank) {
     return TeamRanking(
       team: json['team'] ?? '',
       winProbability: (json['probability'] ?? json['win_probability'] ?? 0.0).toDouble(),
       rank: rank,
+      eloRating: (json['elo_rating'] ?? 1500.0).toDouble(),
+      formState: json['form_state'] ?? 'Normal',
     );
   }
 }

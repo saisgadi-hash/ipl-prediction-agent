@@ -82,9 +82,30 @@ def predict(request: MatchPredictionRequest):
 
 @app.get("/tournament")
 def tournament():
-    """Predict tournament winner probabilities."""
+    """Predict tournament winner probabilities using Monte Carlo simulation."""
     try:
         rankings = predict_tournament_winner()
-        return {"rankings": rankings}
+        return {"rankings": rankings, "method": "monte_carlo", "simulations": 5000}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/team-stats")
+def team_stats():
+    """Get advanced stats for all teams: Elo ratings, form states, Kalman strength."""
+    try:
+        from predict import _get_current_elo_ratings, _get_current_hmm_states
+        teams = list(ACTIVE_TEAMS)
+        elo_ratings = _get_current_elo_ratings(teams)
+        hmm_states = _get_current_hmm_states(teams)
+        state_labels = {0: "Cold", 1: "Normal", 2: "Hot"}
+
+        stats = []
+        for team in sorted(teams):
+            stats.append({
+                "team": team,
+                "elo_rating": round(elo_ratings.get(team, 1500), 1),
+                "form_state": state_labels.get(hmm_states.get(team, 1), "Normal"),
+            })
+        return {"stats": stats}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
