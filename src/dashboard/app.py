@@ -9,7 +9,9 @@ HOW TO RUN:
 import os
 import sys
 import uuid
-
+import base64
+import time
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -78,6 +80,20 @@ TEAM_SHORT = TEAM_SHORT_CODES
 
 
 # ══════════════════════════════════════════
+# HELPER FUNCTIONS
+# ══════════════════════════════════════════
+
+@st.cache_data
+def get_image_base64(img_path):
+    try:
+        with open(img_path, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode()
+            return f"data:image/png;base64,{encoded}"
+    except Exception:
+        return ""
+
+
+# ══════════════════════════════════════════
 # CUSTOM CSS — Clean, Modern, Minimal Design
 # ══════════════════════════════════════════
 
@@ -91,88 +107,92 @@ st.markdown("""
 
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
-    /* ── Background ── */
+    /* ── Background (Facebook Light Gray) ── */
     .stApp {
-        background: #0B0E17;
+        background: #F0F2F5;
     }
 
     /* ── Sidebar ── */
     section[data-testid="stSidebar"] {
-        background: #0F1220;
-        border-right: 1px solid rgba(255,255,255,0.06);
+        background: #FFFFFF;
+        border-right: 1px solid #E4E6EB;
     }
-    section[data-testid="stSidebar"] .stMarkdown p,
-    section[data-testid="stSidebar"] .stMarkdown li,
-    section[data-testid="stSidebar"] .stRadio label {
-        color: #B0B8C8;
+    section[data-testid="stSidebar"] * {
+        color: #4B4F56 !important;
     }
 
-    /* ── Typography ── */
-    h1 {
-        color: #FFFFFF;
+    /* ── Typography (Darker text for readability) ── */
+    h1, h2, h3, h4, h5, h6 {
+        color: #1C1E21 !important;
         font-weight: 800;
-        letter-spacing: -0.03em;
-        font-size: 2.2rem !important;
-    }
-    h2 {
-        color: #FFFFFF;
-        font-weight: 700;
         letter-spacing: -0.02em;
     }
-    h3 {
-        color: #E0E4EC;
-        font-weight: 600;
-        letter-spacing: -0.01em;
+    h1 {
+        font-size: 2.2rem !important;
+    }
+    
+    /* ── Global Text Colors for Light Theme ── */
+    p, span, div, label, li {
+        color: #4B4F56;
+    }
+    
+    /* Override for specific Streamlit text elements that get stuck in dark mode */
+    .stMarkdown p, .stMarkdown span, .stText p {
+        color: #1C1E21 !important;
+    }
+    .stRadio label, .stSelectbox label, .stTextInput label, .stTextArea label, .stNumberInput label {
+        color: #1C1E21 !important;
+        font-weight: 600 !important;
     }
 
     /* ── Metric Cards ── */
     div[data-testid="stMetric"] {
-        background: linear-gradient(145deg, #141824, #1A1F32);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 16px;
+        background: #FFFFFF;
+        border: 1px solid #E4E6EB;
+        border-radius: 12px;
         padding: 20px 16px;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease-in-out;
     }
     div[data-testid="stMetric"]:hover {
-        border-color: rgba(255,255,255,0.12);
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
     div[data-testid="stMetric"] label {
-        color: #6B7280;
+        color: #65676B;
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         font-weight: 600;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #FFFFFF;
+        color: #1C1E21;
         font-size: 28px;
         font-weight: 800;
     }
 
-    /* ── Buttons ── */
+    /* ── Buttons (Instagram + Google Primary) ── */
     .stButton > button {
-        background: linear-gradient(135deg, #6366F1, #8B5CF6);
+        /* Instagram-style gradient for main actions */
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
         color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: 8px;
         font-weight: 600;
         padding: 0.7rem 1.4rem;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        letter-spacing: 0.01em;
+        transition: all 0.2s ease;
     }
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(220, 39, 67, 0.3);
     }
 
     /* ── Select boxes ── */
     .stSelectbox > div > div {
-        background: #141824;
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px;
-        color: white;
+        background: #FFFFFF;
+        border: 1px solid #CED0D4;
+        border-radius: 8px;
+        color: #1C1E21;
     }
 
     /* ── Tabs ── */
@@ -181,37 +201,39 @@ st.markdown("""
         background: transparent;
     }
     .stTabs [data-baseweb="tab"] {
-        background: #141824;
-        border-radius: 10px;
-        color: #6B7280;
-        border: 1px solid rgba(255,255,255,0.06);
+        background: #FFFFFF;
+        border-radius: 8px;
+        color: #65676B;
+        border: 1px solid #E4E6EB;
         padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #6366F1, #8B5CF6);
+        /* Facebook Blue for active tabs */
+        background: #1877F2;
         color: white !important;
         border-color: transparent;
     }
 
     /* ── Custom Components ── */
     .glass-card {
-        background: linear-gradient(145deg, rgba(20,24,36,0.9), rgba(26,31,50,0.9));
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid #E4E6EB;
+        border-radius: 16px;
         padding: 24px;
         margin: 10px 0;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease;
     }
     .glass-card:hover {
-        border-color: rgba(255,255,255,0.12);
         transform: translateY(-2px);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
     }
 
     .gradient-text {
-        background: linear-gradient(135deg, #6366F1, #EC4899);
+        /* Google Colors Gradient */
+        background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 800;
@@ -219,8 +241,9 @@ st.markdown("""
 
     .accent-line {
         width: 40px;
-        height: 3px;
-        background: linear-gradient(90deg, #6366F1, #EC4899);
+        height: 4px;
+        /* Google Colors */
+        background: linear-gradient(90deg, #4285F4 25%, #EA4335 25%, #EA4335 50%, #FBBC05 50%, #FBBC05 75%, #34A853 75%);
         border-radius: 2px;
         margin-bottom: 12px;
     }
@@ -228,7 +251,7 @@ st.markdown("""
     .divider {
         border: none;
         height: 1px;
-        background: rgba(255,255,255,0.06);
+        background: #E4E6EB;
         margin: 32px 0;
     }
 
@@ -236,38 +259,42 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: rgba(20,24,36,0.8);
-        border-radius: 12px;
+        background: #FFFFFF;
+        border-radius: 8px;
         padding: 12px 18px;
         margin: 6px 0;
-        border-left: 3px solid transparent;
+        border-left: 4px solid transparent;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         transition: all 0.2s ease;
     }
     .match-result-card:hover {
-        background: rgba(26,31,50,0.9);
+        background: #F8F9FA;
     }
 
     .badge {
         display: inline-block;
         padding: 4px 12px;
-        border-radius: 20px;
+        border-radius: 16px;
         font-size: 12px;
         font-weight: 600;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
     }
     .badge-win {
-        background: rgba(16,185,129,0.15);
-        color: #10B981;
-        border: 1px solid rgba(16,185,129,0.3);
+        /* Google Green */
+        background: rgba(52, 168, 83, 0.1);
+        color: #34A853;
+        border: 1px solid rgba(52, 168, 83, 0.2);
     }
     .badge-loss {
-        background: rgba(239,68,68,0.15);
-        color: #EF4444;
-        border: 1px solid rgba(239,68,68,0.3);
+        /* Google Red */
+        background: rgba(234, 67, 53, 0.1);
+        color: #EA4335;
+        border: 1px solid rgba(234, 67, 53, 0.2);
     }
 
     .winner-badge-large {
-        background: linear-gradient(135deg, #10B981, #059669);
+        /* Facebook Green for success */
+        background: #42B72A;
         color: white;
         padding: 10px 28px;
         border-radius: 24px;
@@ -275,46 +302,35 @@ st.markdown("""
         font-size: 16px;
         display: inline-block;
         margin-top: 16px;
-        box-shadow: 0 4px 15px rgba(16,185,129,0.3);
-    }
-
-    .stat-label {
-        color: #6B7280;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 600;
-    }
-    .stat-value {
-        color: #FFFFFF;
-        font-size: 20px;
-        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(66, 183, 42, 0.3);
     }
 
     .info-box {
-        background: rgba(99,102,241,0.08);
-        border-left: 3px solid #6366F1;
+        /* Facebook Blue tint */
+        background: #E7F3FF;
+        border-left: 3px solid #1877F2;
         padding: 16px 20px;
-        border-radius: 0 12px 12px 0;
-        color: #B0B8C8;
+        border-radius: 0 8px 8px 0;
+        color: #1C1E21;
         margin: 16px 0;
         font-size: 14px;
     }
 
     /* ── Justification Card ── */
     .justification-card {
-        background: linear-gradient(145deg, #141824, #1A1F32);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 16px;
+        background: #FFFFFF;
+        border: 1px solid #E4E6EB;
+        border-radius: 12px;
         padding: 24px;
         margin: 16px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .factor-row {
         display: flex;
         align-items: center;
         gap: 12px;
         padding: 10px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        border-bottom: 1px solid #F0F2F5;
     }
     .factor-row:last-child { border-bottom: none; }
     .factor-icon {
@@ -323,36 +339,33 @@ st.markdown("""
         display: flex; align-items: center; justify-content: center;
         font-size: 14px; font-weight: 700;
     }
-    .factor-positive { background: rgba(16,185,129,0.15); color: #10B981; }
-    .factor-negative { background: rgba(239,68,68,0.15); color: #EF4444; }
-    .factor-text { color: #E0E4EC; font-size: 14px; flex: 1; }
-    .factor-value { color: #6B7280; font-size: 12px; font-weight: 600; min-width: 60px; text-align: right; }
-
-    /* ── Feedback Stars ── */
-    .star-rating { font-size: 28px; cursor: pointer; }
-    .star-active { color: #F59E0B; }
-    .star-inactive { color: #374151; }
+    .factor-positive { background: rgba(52, 168, 83, 0.1); color: #34A853; }
+    .factor-negative { background: rgba(234, 67, 53, 0.1); color: #EA4335; }
+    .factor-text { color: #1C1E21; font-size: 14px; flex: 1; }
+    .factor-value { color: #65676B; font-size: 12px; font-weight: 600; min-width: 60px; text-align: right; }
 
     /* ── Gamification ── */
     .badge-earned {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(99,102,241,0.1);
-        border: 1px solid rgba(99,102,241,0.2);
+        /* Google Blue */
+        background: rgba(66, 133, 244, 0.1);
+        border: 1px solid rgba(66, 133, 244, 0.2);
         border-radius: 20px;
         padding: 6px 14px;
         font-size: 13px;
-        color: #A5B4FC;
+        color: #4285F4;
         margin: 4px;
     }
 
     .points-display {
-        background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));
-        border: 1px solid rgba(99,102,241,0.2);
+        background: #FFFFFF;
+        border: 1px solid #E4E6EB;
         border-radius: 12px;
         padding: 12px 20px;
         text-align: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
     /* ── Animations ── */
@@ -401,17 +414,17 @@ def load_data():
 # PLOTLY THEME HELPER
 # ══════════════════════════════════════════
 
-def apply_dark_theme(fig, height=350):
-    """Apply consistent dark theme to any Plotly figure."""
+def apply_light_theme(fig, height=350):
+    """Apply consistent light theme to any Plotly figure."""
     fig.update_layout(
         height=height,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#B0B8C8", family="Inter"),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.04)", zerolinecolor="rgba(255,255,255,0.06)"),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", zerolinecolor="rgba(255,255,255,0.06)"),
+        font=dict(color="#1C1E21", family="Inter", size=12),
+        xaxis=dict(gridcolor="#E4E6EB", zerolinecolor="#CED0D4", tickfont=dict(color="#4B4F56")),
+        yaxis=dict(gridcolor="#E4E6EB", zerolinecolor="#CED0D4", tickfont=dict(color="#4B4F56")),
         margin=dict(l=40, r=20, t=40, b=30),
-        legend=dict(font=dict(color="#B0B8C8")),
+        legend=dict(font=dict(color="#1C1E21")),
     )
     return fig
 
@@ -430,27 +443,92 @@ def main():
         st.markdown("""
         <div style="text-align:center; padding: 20px 0;">
             <div style="font-size: 40px; margin-bottom: 8px;">🏏</div>
-            <div style="font-size: 18px; font-weight: 800; color: #FFF; letter-spacing: -0.02em;">IPL Predictor</div>
+            <div style="font-size: 18px; font-weight: 800; color: #1C1E21; letter-spacing: -0.02em;">IPL Predictor</div>
             <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">AI-Powered Analysis</div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-        page = st.radio(
-            "Navigate",
-            ["Dashboard", "Match Predictor", "Tournament", "Teams", "Players", "Model", "Community"],
-            label_visibility="collapsed",
-            format_func=lambda x: {
-                "Dashboard": "🏠  Dashboard",
-                "Match Predictor": "🔮  Predictor",
-                "Tournament": "🏆  Tournament",
-                "Teams": "📊  Teams",
-                "Players": "⭐  Players",
-                "Model": "📈  Model",
-                "Community": "👥  Community",
-            }.get(x, x),
+        # Initialize navigation state if not present
+        if "current_page" not in st.session_state:
+            st.session_state["current_page"] = "Dashboard"
+
+        nav_items = [
+            ("Dashboard", "nav_dashboard_1772835882132.png"),
+            ("Match Predictor", "nav_predictor_1772835896572.png"),
+            ("Tournament", "nav_tournament_1772835910419.png"),
+            ("Teams", "nav_teams_1772835924417.png"),
+            ("Players", "nav_players_1772836000895.png"),
+            ("Model", "nav_model_1772835977122.png"),
+            ("Community", "nav_community_1772835957621.png"),
+        ]
+
+        st.markdown(
+            """
+            <style>
+            .stButton.nav-button > button {
+                width: 100%;
+                text-align: left !important;
+                background-color: transparent !important;
+                color: #4B4F56 !important;
+                border: none !important;
+                padding: 10px 15px !important;
+                border-radius: 8px !important;
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                display: flex !important;
+                justify-content: flex-start !important;
+                gap: 12px !important;
+                align-items: center !important;
+                box-shadow: none !important;
+                transition: all 0.2s ease;
+            }
+            .stButton.nav-button > button:hover {
+                background-color: #F0F2F5 !important;
+                color: #1C1E21 !important;
+            }
+            .stButton.nav-button.active-nav > button {
+                background-color: #EBF5FF !important;
+                color: #1877F2 !important;
+            }
+            div[data-testid="stVerticalBlock"] > div > div > div > div > div.stButton {
+                margin-bottom: 4px;
+            }
+            /* Hide the default Streamlit button markdown output p tags to let flex work */
+            .stButton.nav-button > button p {
+                margin: 0 !important;
+                flex: 1;
+                text-align: left;
+            }
+            </style>
+            """, unsafe_allow_html=True
         )
+
+        for label, icon_file in nav_items:
+            icon_path = Path("src/dashboard/assets") / icon_file
+            img_b64 = get_image_base64(icon_path)
+            
+            # Using HTML inside the button label to render the image alongside text
+            button_html = f'<img src="{img_b64}" width="24" height="24" style="border-radius:6px;"> <span style="margin-top:2px">{label}</span>'
+            
+            # We use a container to apply the right class name depending on state
+            if st.session_state["current_page"] == label:
+                button_class = "nav-button active-nav"
+            else:
+                button_class = "nav-button"
+                
+            # Streamlit doesn't natively allow rich HTML in buttons, but markdown works with some tricks.
+            # Instead of standard buttons, we'll use columns to layout image and button nicely.
+            col_icon, col_btn = st.columns([1, 4])
+            with col_icon:
+                st.markdown(f'<img src="{img_b64}" width="28" height="28" style="margin-top: 5px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">', unsafe_allow_html=True)
+            with col_btn:
+                if st.button(label, key=f"nav_{label}", use_container_width=True):
+                    st.session_state["current_page"] = label
+                    st.rerun()
+
+        page = st.session_state["current_page"]
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
@@ -463,7 +541,7 @@ def main():
                 st.markdown(f"""
                 <div class="points-display">
                     <div style="font-size:11px; color:#6B7280; text-transform:uppercase; letter-spacing:0.1em;">Your Points</div>
-                    <div style="font-size:24px; font-weight:800; color:#A5B4FC;">{user_stats['points']}</div>
+                    <div style="font-size:24px; font-weight:800; color:#1877F2;">{user_stats['points']}</div>
                 </div>
                 """, unsafe_allow_html=True)
         except Exception:
@@ -532,9 +610,9 @@ def show_dashboard(data):
                 x=wins.values, y=[get_short_code(t) for t in wins.index],
                 orientation="h", marker_color=colors,
                 text=wins.values, textposition="outside",
-                textfont=dict(color="white", size=12),
+                textfont=dict(color="#1C1E21", size=12),
             ))
-            apply_dark_theme(fig, 420)
+            apply_light_theme(fig, 420)
             fig.update_layout(yaxis=dict(autorange="reversed"), xaxis_title="Wins")
             fig.update_layout(margin=dict(l=10, r=50, t=10, b=30))
             st.plotly_chart(fig, use_container_width=True)
@@ -567,7 +645,7 @@ def show_dashboard(data):
         st.markdown("### Season Trend")
         sc = matches.groupby("season").size().reset_index(name="matches")
         fig2 = px.area(sc, x="season", y="matches", color_discrete_sequence=["#6366F1"])
-        apply_dark_theme(fig2, 220)
+        apply_light_theme(fig2, 220)
         fig2.update_traces(line=dict(width=2), fillcolor="rgba(99,102,241,0.1)")
         fig2.update_layout(xaxis_title="", yaxis_title="Matches")
         st.plotly_chart(fig2, use_container_width=True)
@@ -688,7 +766,7 @@ def show_match_predictor(data):
                             textposition="outside",
                             textfont=dict(color="#B0B8C8", size=11),
                         ))
-                        apply_dark_theme(fig, 300)
+                        apply_light_theme(fig, 300)
                         fig.update_layout(
                             title="Feature Impact (SHAP Values)",
                             yaxis=dict(autorange="reversed"),
@@ -810,7 +888,7 @@ def show_tournament_rankings(data):
                             <div style="width:{bar_pct}%; height:100%; background:linear-gradient(90deg, {color}, {color}66);
                                         border-radius:6px;"></div>
                         </div>
-                        <span style="color:#FFF; font-weight:700; min-width:55px; text-align:right;">{prob:.1%}</span>
+                        <span style="color:#1C1E21; font-weight:700; min-width:55px; text-align:right;">{prob:.1%}</span>
                     </div>
                     """, unsafe_allow_html=True)
         except Exception:
@@ -858,7 +936,7 @@ def show_team_analysis(data):
         fillcolor=f"rgba({int(tc[1:3],16)},{int(tc[3:5],16)},{int(tc[5:7],16)},0.1)",
     ))
     fig.add_hline(y=0.5, line_dash="dash", line_color="rgba(255,255,255,0.1)")
-    apply_dark_theme(fig, 320)
+    apply_light_theme(fig, 320)
     fig.update_layout(title=f"Rolling 15-Match Win Rate", yaxis=dict(range=[0, 1], title="Win Rate"))
     st.plotly_chart(fig, use_container_width=True)
 
@@ -868,10 +946,10 @@ def show_team_analysis(data):
         x=ss["season"], y=ss["wr"],
         marker_color=[tc if wr >= 0.5 else "#EF4444" for wr in ss["wr"]],
         text=[f"{wr:.0%}" for wr in ss["wr"]],
-        textposition="outside", textfont=dict(color="white", size=11),
+        textposition="outside", textfont=dict(color="#1C1E21", size=11),
     ))
     fig2.add_hline(y=0.5, line_dash="dash", line_color="rgba(255,255,255,0.1)")
-    apply_dark_theme(fig2, 280)
+    apply_light_theme(fig2, 280)
     fig2.update_layout(title="Win Rate by Season", yaxis=dict(range=[0, 1], title="Win Rate"))
     st.plotly_chart(fig2, use_container_width=True)
 
@@ -899,9 +977,9 @@ def show_player_stats(data):
                 x=f["total_runs"], y=f["batter"], orientation="h",
                 marker_color="#6366F1",
                 text=[f"{r:,} (SR {sr:.0f})" for r, sr in zip(f["total_runs"], f["strike_rate"])],
-                textposition="outside", textfont=dict(color="#B0B8C8", size=11),
+                textposition="outside", textfont=dict(color="#1C1E21", size=11),
             ))
-            apply_dark_theme(fig, max(400, len(f) * 28))
+            apply_light_theme(fig, max(400, len(f) * 28))
             fig.update_layout(yaxis=dict(autorange="reversed"), title="Top Run Scorers", margin=dict(r=120))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -913,9 +991,9 @@ def show_player_stats(data):
                 x=fb["wickets"], y=fb["bowler"], orientation="h",
                 marker_color="#EC4899",
                 text=[f"{w:.0f} wkts (Econ {e:.1f})" for w, e in zip(fb["wickets"], fb["economy"])],
-                textposition="outside", textfont=dict(color="#B0B8C8", size=11),
+                textposition="outside", textfont=dict(color="#1C1E21", size=11),
             ))
-            apply_dark_theme(fig2, max(400, len(fb) * 28))
+            apply_light_theme(fig2, max(400, len(fb) * 28))
             fig2.update_layout(yaxis=dict(autorange="reversed"), title="Top Wicket Takers", margin=dict(r=130))
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -944,11 +1022,11 @@ def show_model_performance(data):
             x=list(models.keys()), y=[v * 100 for v in models.values()],
             marker_color=colors,
             text=[f"{v*100:.1f}%" for v in models.values()],
-            textposition="outside", textfont=dict(color="white", size=15, family="Inter"),
+            textposition="outside", textfont=dict(color="#1C1E21", size=15, family="Inter"),
         ))
         fig.add_hline(y=65, line_dash="dash", line_color="#EF4444",
                       annotation_text="Target: 65%", annotation_font_color="#EF4444")
-        apply_dark_theme(fig, 350)
+        apply_light_theme(fig, 350)
         fig.update_layout(yaxis=dict(range=[0, 100], title="Accuracy %"))
         st.plotly_chart(fig, use_container_width=True)
 
@@ -966,9 +1044,9 @@ def show_model_performance(data):
             fig2.add_trace(go.Bar(
                 x=s["season"], y=s["accuracy"] * 100, name=name, marker_color=color,
                 text=[f"{a*100:.0f}%" for a in s["accuracy"]],
-                textposition="outside", textfont=dict(color="white"),
+                textposition="outside", textfont=dict(color="#1C1E21"),
             ))
-        apply_dark_theme(fig2, 350)
+        apply_light_theme(fig2, 350)
         fig2.update_layout(barmode="group", yaxis_title="Accuracy %")
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -1027,10 +1105,10 @@ def show_community(data):
                 medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(entry["rank"], f"#{entry['rank']}")
                 st.markdown(f"""
                 <div style="display:flex; align-items:center; gap:14px;
-                            background:rgba(20,24,36,0.8); border-radius:10px; padding:10px 18px; margin:5px 0;">
+                            background:#FFFFFF; border: 1px solid #E4E6EB; border-radius:10px; padding:10px 18px; margin:5px 0;">
                     <span style="font-size:16px; min-width:30px;">{medal}</span>
-                    <span style="color:#A5B4FC; font-weight:600; min-width:80px;">{entry['session_id']}</span>
-                    <span style="color:#FFF; font-weight:700; flex:1;">{entry['points']} pts</span>
+                    <span style="color:#1877F2; font-weight:600; min-width:80px;">{entry['session_id']}</span>
+                    <span style="color:#1C1E21; font-weight:700; flex:1;">{entry['points']} pts</span>
                     <span style="color:#6B7280; font-size:13px;">{entry['predictions']} picks · {entry['accuracy']}% acc</span>
                 </div>
                 """, unsafe_allow_html=True)
