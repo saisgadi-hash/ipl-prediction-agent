@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/prediction.dart';
+import '../models/live_match.dart';
 
 class ApiService {
   // Change this to your Railway API URL when deployed
@@ -73,5 +74,35 @@ class ApiService {
     } else {
       throw Exception('Failed to load tournament predictions');
     }
+  }
+
+  /// Get live IPL matches (Phase D).
+  static Future<List<LiveMatch>> getLiveMatches() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/live/matches'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final matches = data['matches'] as List;
+        return matches.map((m) => LiveMatch.fromJson({'state': m})).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// Get live match details with prediction (Phase D).
+  static Future<LiveMatch?> getLiveMatch(String matchId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/live/match/$matchId'),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return LiveMatch.fromJson(json.decode(response.body));
+      }
+    } catch (_) {}
+    return null;
   }
 }

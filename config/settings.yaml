@@ -199,6 +199,24 @@ model:
     target: 0.65          # Our goal
     excellent: 0.70       # Above this = very good
 
+# ── Live Data Feeds (Phase D) ──
+live_feeds:
+  cricapi:
+    base_url: "https://api.cricapi.com/v1"
+    daily_limit: 90          # Free tier: 100/day, leave 10 buffer
+    cache_ttl_seconds: 15    # Cache responses for 15s
+    poll_interval_seconds: 30 # Poll every 30s during live match
+    # API key stored in .env as CRICAPI_KEY
+
+  odds_api:
+    base_url: "https://api.the-odds-api.com/v4"
+    monthly_limit: 450       # Free tier: 500/month, leave 50 buffer
+    cache_ttl_seconds: 3600  # Cache odds for 1 hour
+    regions: "eu,uk"
+    markets: "h2h"
+    sport: "cricket_ipl"
+    # API key stored in .env as THE_ODDS_API_KEY
+
 # ── Dashboard Configuration ──
 dashboard:
   title: "IPL Prediction AI Agent"

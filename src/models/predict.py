@@ -297,6 +297,135 @@ def predict_tournament_winner(teams: list = None, num_simulations: int = 5000) -
     return rankings
 
 
+def predict_live(match_state: dict) -> dict:
+    """
+    Phase D: Live in-match prediction.
+
+    Takes current match state (from CricAPI) and adjusts the pre-match
+    prediction based on live features like runs vs par, wickets remaining,
+    run rate momentum, and projected final score.
+
+    Args:
+        match_state: Dict with keys from MatchState.to_dict()
+            (team1, team2, team1_runs, team1_wickets, team1_overs, etc.)
+
+    Returns:
+        Dict with updated win probability and live analysis.
+    """
+    team1 = match_state.get("team1", "")
+    team2 = match_state.get("team2", "")
+    venue = match_state.get("venue", "")
+    innings = match_state.get("innings", 1)
+
+    # Get baseline pre-match prediction
+    baseline = predict_match(team1, team2, venue=venue, skip_llm=True)
+    baseline_prob = baseline.get("team1_win_probability", 0.5)
+
+    # ── Calculate live adjustment factors ──
+    adjustment = 0.0
+
+    if innings == 1:
+        # First innings: batting team is team1 (or whichever is batting)
+        runs = match_state.get("team1_runs", 0)
+        wickets = match_state.get("team1_wickets", 0)
+        overs = match_state.get("team1_overs", 0)
+        run_rate = match_state.get("team1_run_rate", 0)
+
+        if overs > 0:
+            # Par score calculation (venue average scaled to overs)
+            venue_avg = 170  # Default T20 average
+            par_at_this_over = (venue_avg / 20.0) * overs
+            runs_vs_par = runs - par_at_this_over
+
+            # Runs above/below par → adjust probability
+            adjustment += runs_vs_par * 0.002  # +0.2% per run above par
+
+            # Wickets factor: losing wickets hurts batting team
+            if wickets >= 5:
+                adjustment -= 0.08  # Heavy collapse
+            elif wickets >= 3:
+                adjustment -= 0.03
+
+            # Projected final score
+            if overs > 2:
+                projected_score = int(runs * (20.0 / overs))
+            else:
+                projected_score = venue_avg  # Too early to project
+        else:
+            projected_score = 170
+            runs_vs_par = 0
+
+    else:
+        # Second innings: chasing team
+        t2_runs = match_state.get("team2_runs", 0)
+        t2_wickets = match_state.get("team2_wickets", 0)
+        t2_overs = match_state.get("team2_overs", 0)
+        target = match_state.get("target", 0)
+        required_rr = match_state.get("required_run_rate", 0)
+        current_rr = match_state.get("team2_run_rate", 0)
+
+        if t2_overs > 0 and target > 0:
+            # Run rate comparison
+            rr_diff = current_rr - required_rr
+            adjustment += rr_diff * 0.03  # +3% per run rate above required
+
+            # Wickets remaining factor
+            wickets_left = 10 - t2_wickets
+            if wickets_left <= 3:
+                adjustment -= 0.15  # Tail exposed
+            elif wickets_left <= 5:
+                adjustment -= 0.05
+
+            # Progress towards target
+            runs_needed = target - t2_runs
+            balls_left = max(1, (20 - t2_overs) * 6)
+            runs_per_ball_needed = runs_needed / balls_left
+
+            if runs_per_ball_needed > 2.5:
+                adjustment -= 0.20  # Nearly impossible
+            elif runs_per_ball_needed > 2.0:
+                adjustment -= 0.10  # Very difficult
+            elif runs_per_ball_needed < 1.0:
+                adjustment += 0.15  # Easy chase
+
+            projected_score = int(t2_runs + (current_rr * (20 - t2_overs))) if t2_overs < 20 else t2_runs
+        else:
+            projected_score = target - 1 if target > 0 else 170
+            runs_needed = target
+            runs_per_ball_needed = 0
+
+    # Apply adjustment (clamp to 0.01 — 0.99)
+    live_prob = max(0.01, min(0.99, baseline_prob + adjustment))
+
+    # Determine momentum
+    if adjustment > 0.05:
+        momentum = "strong_positive"
+    elif adjustment > 0.01:
+        momentum = "positive"
+    elif adjustment < -0.05:
+        momentum = "strong_negative"
+    elif adjustment < -0.01:
+        momentum = "negative"
+    else:
+        momentum = "neutral"
+
+    return {
+        "match_id": match_state.get("match_id", ""),
+        "team1": team1,
+        "team2": team2,
+        "innings": innings,
+        "baseline_probability": round(baseline_prob, 4),
+        "live_probability_team1": round(live_prob, 4),
+        "live_probability_team2": round(1 - live_prob, 4),
+        "predicted_winner": team1 if live_prob >= 0.5 else team2,
+        "confidence": round(abs(live_prob - 0.5) * 200, 1),
+        "adjustment": round(adjustment, 4),
+        "momentum": momentum,
+        "projected_score": projected_score,
+        "last_updated": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Predict IPL match outcome")
     parser.add_argument("--team1", type=str, default="Chennai Super Kings")

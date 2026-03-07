@@ -371,6 +371,7 @@ def main():
 
         nav_items = [
             ("Dashboard", "nav_dashboard_1772835882132.png"),
+            ("Live Match", "nav_dashboard_1772835882132.png"),
             ("Match Predictor", "nav_predictor_1772835896572.png"),
             ("Tournament", "nav_tournament_1772835910419.png"),
             ("Teams", "nav_teams_1772835924417.png"),
@@ -475,6 +476,7 @@ def main():
 
     pages = {
         "Dashboard": show_dashboard,
+        "Live Match": show_live_match,
         "Match Predictor": show_match_predictor,
         "Tournament": show_tournament_rankings,
         "Teams": show_team_analysis,
@@ -571,6 +573,211 @@ def show_dashboard(data):
             No data found. Run the pipeline: <code>python run_pipeline.py</code>
         </div>
         """, unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════
+# PAGE: LIVE MATCH (Phase D)
+# ══════════════════════════════════════════
+
+def show_live_match(data):
+    st.markdown('<div class="accent-line"></div>', unsafe_allow_html=True)
+    st.markdown("# Live Match")
+    st.markdown('<p style="color: #6B7280;">Real-time scores, predictions, and betting odds during live IPL matches</p>', unsafe_allow_html=True)
+
+    # Auto-refresh toggle
+    auto_refresh = st.checkbox("Auto-refresh every 30 seconds", value=False)
+    if auto_refresh:
+        import time as _t
+        _t.sleep(0.1)
+        st.markdown('<meta http-equiv="refresh" content="30">', unsafe_allow_html=True)
+
+    try:
+        from live_score_collector import LiveScoreCollector
+        collector = LiveScoreCollector()
+        matches = collector.get_live_matches()
+    except Exception as e:
+        matches = []
+        st.markdown(f'<div class="info-box">Live score service unavailable: {e}. Add CRICAPI_KEY to your .env file.</div>', unsafe_allow_html=True)
+
+    if not matches:
+        # No live matches — show helpful message
+        st.markdown("""
+        <div style="text-align:center; padding:60px 20px;">
+            <div style="font-size:48px; margin-bottom:16px;">📡</div>
+            <h3 style="color:#2D3748;">No Live IPL Matches Right Now</h3>
+            <p style="color:#6B7280; max-width:400px; margin:0 auto;">
+                Live scores appear here during IPL matches. Check back when a match is in progress!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Show upcoming odds if available
+        try:
+            from odds_collector import OddsCollector
+            odds_collector = OddsCollector()
+            odds = odds_collector.get_upcoming_odds()
+            if odds:
+                st.markdown("### Upcoming Match Odds")
+                for o in odds:
+                    t1 = o.get("team1", "TBD")
+                    t2 = o.get("team2", "TBD")
+                    p1 = o.get("implied_probability_team1", 0.5)
+                    p2 = o.get("implied_probability_team2", 0.5)
+                    st.markdown(f"""
+                    <div style="background:white; border-radius:12px; padding:16px 20px; margin:8px 0;
+                                border-left:3px solid #6C5CE7; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:700; color:#2D3748;">{t1}</span>
+                            <span style="color:#6B7280; font-size:12px;">vs</span>
+                            <span style="font-weight:700; color:#2D3748;">{t2}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                            <span style="color:#6C5CE7; font-weight:600;">{p1:.1%}</span>
+                            <span style="color:#6B7280; font-size:11px;">Bookmaker Implied Probability</span>
+                            <span style="color:#E17055; font-weight:600;">{p2:.1%}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        except Exception:
+            pass
+        return
+
+    # ── Live match selector ──
+    match_names = [f"{m['team1']} vs {m['team2']} — {m['status']}" for m in matches]
+    selected_idx = st.selectbox("Select Match", range(len(match_names)), format_func=lambda i: match_names[i])
+    match = matches[selected_idx]
+
+    team1 = match.get("team1", "")
+    team2 = match.get("team2", "")
+    t1_color = get_team_color(team1)
+    t2_color = get_team_color(team2)
+
+    # ── Live Scoreboard ──
+    st.markdown("### Live Score")
+    col1, col2, col3 = st.columns([2, 1, 2])
+
+    with col1:
+        st.markdown(f"""
+        <div style="text-align:center; padding:20px; background:white; border-radius:12px;
+                    border-top:3px solid {t1_color}; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-weight:700; color:{t1_color}; font-size:16px;">{get_short_code(team1)}</div>
+            <div style="font-size:28px; font-weight:800; color:#2D3748; margin:8px 0;">
+                {match.get('team1_score', '-')}
+            </div>
+            <div style="color:#6B7280; font-size:12px;">RR: {match.get('team1_run_rate', 0):.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="text-align:center; padding:20px;">
+            <div style="font-size:11px; color:#6B7280; text-transform:uppercase;">vs</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+        <div style="text-align:center; padding:20px; background:white; border-radius:12px;
+                    border-top:3px solid {t2_color}; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <div style="font-weight:700; color:{t2_color}; font-size:16px;">{get_short_code(team2)}</div>
+            <div style="font-size:28px; font-weight:800; color:#2D3748; margin:8px 0;">
+                {match.get('team2_score', '-') or '-'}
+            </div>
+            <div style="color:#6B7280; font-size:12px;">RR: {match.get('team2_run_rate', 0):.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Status bar
+    st.markdown(f"""
+    <div style="text-align:center; padding:10px; color:#6B7280; font-size:13px;">
+        {match.get('status', '')} | {match.get('venue', '')}
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Live Prediction ──
+    if match.get("match_started") and not match.get("match_ended"):
+        st.markdown("### AI Prediction")
+        try:
+            from predict import predict_live
+            prediction = predict_live(match)
+
+            live_prob_t1 = prediction.get("live_probability_team1", 0.5)
+            live_prob_t2 = prediction.get("live_probability_team2", 0.5)
+            winner = prediction.get("predicted_winner", "")
+            momentum = prediction.get("momentum", "neutral")
+            projected = prediction.get("projected_score", 0)
+            adjustment = prediction.get("adjustment", 0)
+
+            momentum_icon = {
+                "strong_positive": "🚀", "positive": "📈",
+                "neutral": "➡️",
+                "negative": "📉", "strong_negative": "💥",
+            }.get(momentum, "➡️")
+
+            # Win probability bar
+            pct1 = int(live_prob_t1 * 100)
+            pct2 = 100 - pct1
+            st.markdown(f"""
+            <div style="background:white; border-radius:12px; padding:20px;
+                        box-shadow:0 2px 8px rgba(0,0,0,0.06); margin:10px 0;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:{t1_color}; font-weight:700;">{get_short_code(team1)} {pct1}%</span>
+                    <span style="font-size:14px;">{momentum_icon} {momentum.replace('_', ' ').title()}</span>
+                    <span style="color:{t2_color}; font-weight:700;">{pct2}% {get_short_code(team2)}</span>
+                </div>
+                <div style="display:flex; height:24px; border-radius:12px; overflow:hidden;">
+                    <div style="width:{pct1}%; background:{t1_color};"></div>
+                    <div style="width:{pct2}%; background:{t2_color};"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:12px; color:#6B7280;">
+                    <span>Projected Score: {projected}</span>
+                    <span>Adjustment: {adjustment:+.1%}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        except Exception as e:
+            st.markdown(f'<div class="info-box">Live prediction unavailable: {e}</div>', unsafe_allow_html=True)
+
+    # ── Betting Odds Comparison ──
+    try:
+        from odds_collector import OddsCollector
+        odds_collector = OddsCollector()
+        all_odds = odds_collector.get_upcoming_odds()
+
+        match_odds = None
+        for o in all_odds:
+            if (team1 in o.get("team1", "") or team1 in o.get("team2", "")) and \
+               (team2 in o.get("team1", "") or team2 in o.get("team2", "")):
+                match_odds = o
+                break
+
+        if match_odds:
+            st.markdown("### Model vs Bookmakers")
+            imp_t1 = match_odds.get("implied_probability_team1", 0.5)
+            imp_t2 = match_odds.get("implied_probability_team2", 0.5)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(f"{get_short_code(team1)} (Bookmaker)", f"{imp_t1:.1%}")
+            with col2:
+                st.metric(f"{get_short_code(team2)} (Bookmaker)", f"{imp_t2:.1%}")
+
+            # Show bookmaker details
+            for bm_name, bm_data in match_odds.get("bookmakers", {}).items():
+                odds_str = " | ".join([f"{k}: {v['decimal_odds']}" for k, v in bm_data.items()])
+                st.markdown(f"<span style='color:#6B7280; font-size:12px;'>{bm_name}: {odds_str}</span>", unsafe_allow_html=True)
+
+    except Exception:
+        pass
+
+    # ── Match Info ──
+    st.markdown(f"""
+    <div style="text-align:center; color:#6B7280; font-size:11px; margin-top:20px;">
+        Last updated: {match.get('last_updated', 'N/A')} |
+        API requests remaining today: {collector.get_requests_remaining() if 'collector' in dir() else 'N/A'}
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════
