@@ -249,12 +249,32 @@ _CACHE_TTL = 300  # 5 minutes
 import time
 
 
+def _get_current_pwe(teams: list) -> list:
+    """
+    Calculate Pythagorean Win Expectation for all teams.
+    Returns list of dicts with expected vs actual win %.
+    """
+    matches_path = PROCESSED_DATA_DIR / "matches.csv"
+    deliveries_path = PROCESSED_DATA_DIR / "deliveries.csv"
+    if not matches_path.exists() or not deliveries_path.exists():
+        return []
+
+    matches = pd.read_csv(matches_path)
+    matches['date'] = pd.to_datetime(matches['date'])
+    deliveries = pd.read_csv(deliveries_path)
+
+    sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "features"))
+    from pythagorean_expectation import calculate_all_teams_pwe
+
+    return calculate_all_teams_pwe(teams, matches, deliveries)
+
+
 def predict_tournament_winner(teams: list = None, num_simulations: int = 5000) -> list:
     """
     Predict tournament winner using Monte Carlo simulation with Elo-based probabilities.
 
-    Runs N full season simulations (double round-robin + playoffs) and returns
-    win probability distributions with confidence intervals.
+    Phase E: Now includes Poisson Binomial confidence intervals, Pythagorean
+    Win Expectation data, and retention-adjusted Elo ratings.
     """
     global _tournament_cache
 
@@ -266,7 +286,7 @@ def predict_tournament_winner(teams: list = None, num_simulations: int = 5000) -
     if teams is None:
         teams = list(ACTIVE_TEAMS.copy())
 
-    # Get current Elo ratings from historical data
+    # Get current Elo ratings (now with retention decay from Phase E)
     elo_ratings = _get_current_elo_ratings(teams)
 
     # Get HMM form states
@@ -277,18 +297,57 @@ def predict_tournament_winner(teams: list = None, num_simulations: int = 5000) -
     from tournament_simulation import simulate_tournament
     probabilities = simulate_tournament(teams, elo_ratings, num_simulations)
 
-    # Build ranked results with advanced stats
+    # Phase E: Compute confidence intervals
+    try:
+        sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "models"))
+        from confidence_intervals import tournament_confidence_bands, monte_carlo_confidence_interval
+        conf_bands = tournament_confidence_bands(teams, elo_ratings)
+    except Exception:
+        conf_bands = {}
+        def monte_carlo_confidence_interval(w, n):
+            p = w / max(n, 1)
+            return (p, max(0, p - 0.03), min(1, p + 0.03))
+
+    # Phase E: Compute Pythagorean Win Expectation
+    try:
+        pwe_data = _get_current_pwe(teams)
+        pwe_lookup = {p["team"]: p for p in pwe_data}
+    except Exception:
+        pwe_lookup = {}
+
+    # Build ranked results
     sorted_teams = sorted(probabilities.items(), key=lambda x: x[1], reverse=True)
 
     rankings = []
     for i, (team, prob) in enumerate(sorted_teams):
+        # Wilson score CI for Monte Carlo probability
+        _, ci_lo, ci_hi = monte_carlo_confidence_interval(
+            int(prob * num_simulations), num_simulations
+        )
+
+        # Poisson Binomial league-stage CI
+        team_band = conf_bands.get(team, {})
+
+        # PWE data
+        team_pwe = pwe_lookup.get(team, {})
+
         rankings.append({
             "rank": i + 1,
             "team": team,
             "win_probability": round(prob, 4),
+            "ci_lower": round(ci_lo, 4),
+            "ci_upper": round(ci_hi, 4),
             "elo_rating": round(elo_ratings.get(team, 1500), 1),
             "form_state": state_labels.get(hmm_states.get(team, 1), "Normal"),
             "simulations": num_simulations,
+            # League-stage Poisson Binomial CI
+            "league_wins_mean": team_band.get("mean", 0),
+            "league_wins_ci_lower": team_band.get("ci_lower", 0),
+            "league_wins_ci_upper": team_band.get("ci_upper", 0),
+            # Pythagorean Win Expectation
+            "pwe_expected": team_pwe.get("pwe_expected_win_pct", 0.5),
+            "pwe_actual": team_pwe.get("pwe_actual_win_pct", 0.5),
+            "pwe_diff": team_pwe.get("pwe_performance_diff", 0.0),
         })
 
     # Cache the result

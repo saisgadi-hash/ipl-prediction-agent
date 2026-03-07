@@ -1022,7 +1022,7 @@ def show_tournament_rankings(data):
                     </div>
                     """, unsafe_allow_html=True)
 
-                # ── Bar Chart ──
+                # ── Bar Chart with 95% Confidence Intervals ──
                 st.markdown("### Monte Carlo Distribution")
                 import plotly.graph_objects as go
                 fig = go.Figure()
@@ -1030,23 +1030,95 @@ def show_tournament_rankings(data):
                 probs_sorted = [r["win_probability"] * 100 for r in rankings]
                 colors_sorted = [get_team_color(t) for t in teams_sorted]
 
+                # Phase E: error bars from CI
+                ci_lowers = [r.get("ci_lower", r["win_probability"]) * 100 for r in rankings]
+                ci_uppers = [r.get("ci_upper", r["win_probability"]) * 100 for r in rankings]
+                err_minus = [p - lo for p, lo in zip(probs_sorted, ci_lowers)]
+                err_plus = [hi - p for p, hi in zip(probs_sorted, ci_uppers)]
+
                 fig.add_trace(go.Bar(
                     x=[get_short_code(t) for t in teams_sorted],
                     y=probs_sorted,
                     marker_color=colors_sorted,
                     text=[f"{p:.1f}%" for p in probs_sorted],
                     textposition="outside",
+                    error_y=dict(
+                        type="data", symmetric=False,
+                        array=err_plus, arrayminus=err_minus,
+                        color="rgba(0,0,0,0.3)", thickness=1.5, width=4,
+                    ),
+                    hovertemplate="<b>%{x}</b><br>Win: %{y:.1f}%<br>95% CI: %{customdata[0]:.1f}%–%{customdata[1]:.1f}%<extra></extra>",
+                    customdata=list(zip(ci_lowers, ci_uppers)),
                 ))
                 apply_light_theme(fig)
                 fig.update_layout(
-                    title="Tournament Win Probability (5,000 simulations)",
+                    title="Tournament Win Probability with 95% Confidence Interval",
                     yaxis_title="Win Probability (%)",
                     height=400,
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # ── Elo Ratings Chart ──
-                st.markdown("### Elo Ratings")
+                # ── Phase E: Pythagorean Win Expectation ──
+                has_pwe = any(r.get("pwe_expected", 0.5) != 0.5 for r in rankings)
+                if has_pwe:
+                    st.markdown("### Pythagorean Win Expectation")
+                    st.markdown('<p style="color: #6B7280;">Expected win % from runs scored vs conceded (RS<sup>6.5</sup> / (RS<sup>6.5</sup> + RC<sup>6.5</sup>)). Teams above expected are overperforming.</p>', unsafe_allow_html=True)
+
+                    pwe_fig = go.Figure()
+                    pwe_teams = [get_short_code(r["team"]) for r in rankings]
+                    pwe_expected = [r.get("pwe_expected", 0.5) * 100 for r in rankings]
+                    pwe_actual = [r.get("pwe_actual", 0.5) * 100 for r in rankings]
+                    pwe_colors = [get_team_color(r["team"]) for r in rankings]
+
+                    pwe_fig.add_trace(go.Bar(
+                        name="Expected (Pythagorean)",
+                        x=pwe_teams, y=pwe_expected,
+                        marker_color=[c + "66" for c in pwe_colors],
+                        text=[f"{p:.0f}%" for p in pwe_expected],
+                        textposition="outside",
+                    ))
+                    pwe_fig.add_trace(go.Bar(
+                        name="Actual Win %",
+                        x=pwe_teams, y=pwe_actual,
+                        marker_color=pwe_colors,
+                        text=[f"{p:.0f}%" for p in pwe_actual],
+                        textposition="outside",
+                    ))
+                    apply_light_theme(pwe_fig)
+                    pwe_fig.update_layout(
+                        title="Expected vs Actual Win % (Pythagorean)",
+                        yaxis_title="Win %", barmode="group", height=400,
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    )
+                    st.plotly_chart(pwe_fig, use_container_width=True)
+
+                    # Over/underperformer callouts
+                    sorted_by_pwe = sorted(rankings, key=lambda r: r.get("pwe_diff", 0), reverse=True)
+                    if len(sorted_by_pwe) >= 2:
+                        col1, col2 = st.columns(2)
+                        top_perf = sorted_by_pwe[0]
+                        bot_perf = sorted_by_pwe[-1]
+                        with col1:
+                            diff = top_perf.get("pwe_diff", 0) * 100
+                            st.markdown(f"""
+                            <div style="background:#ECFDF5; border-radius:12px; padding:16px; border-left:3px solid #10B981;">
+                                <div style="color:#10B981; font-weight:700; font-size:13px;">BIGGEST OVERPERFORMER</div>
+                                <div style="font-weight:700; color:{get_team_color(top_perf['team'])}; font-size:16px; margin:4px 0;">{get_short_code(top_perf['team'])}</div>
+                                <div style="color:#6B7280;">Winning {diff:+.1f}% more than runs suggest</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        with col2:
+                            diff = bot_perf.get("pwe_diff", 0) * 100
+                            st.markdown(f"""
+                            <div style="background:#FEF2F2; border-radius:12px; padding:16px; border-left:3px solid #EF4444;">
+                                <div style="color:#EF4444; font-weight:700; font-size:13px;">BIGGEST UNDERPERFORMER</div>
+                                <div style="font-weight:700; color:{get_team_color(bot_perf['team'])}; font-size:16px; margin:4px 0;">{get_short_code(bot_perf['team'])}</div>
+                                <div style="color:#6B7280;">Winning {diff:+.1f}% less than runs suggest</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                # ── Elo Ratings Chart (now retention-adjusted) ──
+                st.markdown("### Elo Ratings (Retention-Adjusted)")
                 elo_fig = go.Figure()
                 elos_sorted = [r.get("elo_rating", 1500) for r in rankings]
                 elo_fig.add_trace(go.Bar(
@@ -1058,7 +1130,7 @@ def show_tournament_rankings(data):
                 ))
                 apply_light_theme(elo_fig)
                 elo_fig.update_layout(
-                    title="Current Elo Ratings (higher = stronger)",
+                    title="Current Elo Ratings (adjusted for offseason squad retention)",
                     yaxis_title="Elo Rating",
                     yaxis_range=[min(elos_sorted) - 100, max(elos_sorted) + 100],
                     height=400,

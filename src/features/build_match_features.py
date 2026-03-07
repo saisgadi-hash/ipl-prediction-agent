@@ -40,6 +40,8 @@ from venue_features import calculate_venue_stats, calculate_team_venue_record
 from expert_nlp import calculate_expert_sentiment
 from elo_ratings import calculate_elo, estimate_kalman_strength
 from hmm_form import calculate_hmm_state
+from pythagorean_expectation import calculate_pythagorean_expectation
+from retention_decay import get_retention_pct
 
 
 def compute_team_recent_form(matches: pd.DataFrame, team: str, before_date, window: int = 5) -> dict:
@@ -235,6 +237,20 @@ def build_features_for_match(
     # B5: HMM Form States (0=Cold, 1=Normal, 2=Hot)
     features["team1_hmm_state"] = calculate_hmm_state(matches_df, team1, match_date)
     features["team2_hmm_state"] = calculate_hmm_state(matches_df, team2, match_date)
+
+    # ── Phase E: Pythagorean Win Expectation ──
+    pwe1 = calculate_pythagorean_expectation(team1, matches_df, deliveries_df, match_date)
+    pwe2 = calculate_pythagorean_expectation(team2, matches_df, deliveries_df, match_date)
+    features["team1_pwe"] = pwe1["pwe_expected_win_pct"]
+    features["team2_pwe"] = pwe2["pwe_expected_win_pct"]
+    features["team1_pwe_diff"] = pwe1["pwe_performance_diff"]
+    features["team2_pwe_diff"] = pwe2["pwe_performance_diff"]
+    features["pwe_expected_diff"] = pwe1["pwe_expected_win_pct"] - pwe2["pwe_expected_win_pct"]
+
+    # ── Phase E: Offseason Retention ──
+    prev_season = str(int(season) - 1) if season.isdigit() else ""
+    features["team1_retention_pct"] = get_retention_pct(team1, prev_season, season) if prev_season else 0.45
+    features["team2_retention_pct"] = get_retention_pct(team2, prev_season, season) if prev_season else 0.45
 
     # ── 8. Target variable ──
     features["team1_won"] = 1 if match.get("winner") == team1 else 0

@@ -73,6 +73,13 @@ class TeamRanking {
   final int rank;
   final double eloRating;
   final String formState;
+  // Phase E: Confidence intervals
+  final double ciLower;
+  final double ciUpper;
+  // Phase E: Pythagorean Win Expectation
+  final double pweExpected;
+  final double pweActual;
+  final double pweDiff;
 
   TeamRanking({
     required this.team,
@@ -80,15 +87,26 @@ class TeamRanking {
     required this.rank,
     this.eloRating = 1500.0,
     this.formState = "Normal",
+    this.ciLower = 0.0,
+    this.ciUpper = 0.0,
+    this.pweExpected = 0.5,
+    this.pweActual = 0.5,
+    this.pweDiff = 0.0,
   });
 
   factory TeamRanking.fromJson(Map<String, dynamic> json, int rank) {
+    final prob = (json['probability'] ?? json['win_probability'] ?? 0.0).toDouble();
     return TeamRanking(
       team: json['team'] ?? '',
-      winProbability: (json['probability'] ?? json['win_probability'] ?? 0.0).toDouble(),
+      winProbability: prob,
       rank: rank,
       eloRating: (json['elo_rating'] ?? 1500.0).toDouble(),
       formState: json['form_state'] ?? 'Normal',
+      ciLower: (json['ci_lower'] ?? prob).toDouble(),
+      ciUpper: (json['ci_upper'] ?? prob).toDouble(),
+      pweExpected: (json['pwe_expected'] ?? 0.5).toDouble(),
+      pweActual: (json['pwe_actual'] ?? 0.5).toDouble(),
+      pweDiff: (json['pwe_diff'] ?? 0.0).toDouble(),
     );
   }
 }

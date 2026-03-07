@@ -178,6 +178,10 @@ class _TournamentScreenState extends State<TournamentScreen> {
                 ..._rankings!.map((t) {
                   final color = AppTheme.getTeamColor(t.team);
                   final pct = (t.winProbability * 100);
+                  final ciLo = (t.ciLower * 100).toStringAsFixed(1);
+                  final ciHi = (t.ciUpper * 100).toStringAsFixed(1);
+                  final hasCi = t.ciLower > 0 && t.ciUpper > 0 && t.ciLower != t.ciUpper;
+                  final pweDiffPct = t.pweDiff * 100;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: GlassCard(
@@ -194,10 +198,15 @@ class _TournamentScreenState extends State<TournamentScreen> {
                             Expanded(child: Text(t.team, style: Theme.of(context).textTheme.titleMedium)),
                             Text(_formIcon(t.formState), style: const TextStyle(fontSize: 14)),
                             const SizedBox(width: 8),
-                            SizedBox(
-                              width: 48,
-                              child: Text('${pct.toStringAsFixed(1)}%', textAlign: TextAlign.right,
-                                style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('${pct.toStringAsFixed(1)}%',
+                                  style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15)),
+                                if (hasCi)
+                                  Text('$ciLo–$ciHi%',
+                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                              ],
                             ),
                           ]),
                           const SizedBox(height: 8),
@@ -219,6 +228,32 @@ class _TournamentScreenState extends State<TournamentScreen> {
                             Text('Elo ${t.eloRating.toStringAsFixed(0)}',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary)),
                           ]),
+                          // Pythagorean performance indicator
+                          if (pweDiffPct.abs() > 1.0) ...[
+                            const SizedBox(height: 6),
+                            Row(children: [
+                              const SizedBox(width: 40),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: pweDiffPct > 0
+                                    ? AppTheme.mint.withOpacity(0.1)
+                                    : AppTheme.coral.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  pweDiffPct > 0
+                                    ? '${pweDiffPct.toStringAsFixed(1)}% above expected'
+                                    : '${pweDiffPct.abs().toStringAsFixed(1)}% below expected',
+                                  style: TextStyle(
+                                    color: pweDiffPct > 0 ? AppTheme.mint : AppTheme.coral,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ]),
+                          ],
                         ],
                       ),
                     ),

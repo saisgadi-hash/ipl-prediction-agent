@@ -1,51 +1,76 @@
 """
 Module B3: Elo Ratings and Kalman Filter
 Calculates true Elo ratings and Kalman Filter hidden team strength based on historical match results.
+
+Phase E: Offseason retention decay — Elo ratings are decayed toward
+1500 at season boundaries proportional to squad turnover.
 """
 import pandas as pd
 import numpy as np
+
+try:
+    from retention_decay import apply_retention_decay, get_retention_pct
+except ImportError:
+    # Fallback if retention_decay not available
+    def apply_retention_decay(elo, pct, **kw):
+        return elo
+    def get_retention_pct(team, prev, curr):
+        return 0.45
+
 
 def calculate_elo(matches: pd.DataFrame, team: str, current_date, k: int = 32, start_elo: float = 1500.0) -> float:
     """
     Computes Elo rating for a team by chronologically playing through all
     historical matches before the given current_date.
-    
+
+    Phase E: Applies offseason retention decay at season boundaries.
+
     Returns the final Elo rating of the team.
     """
     past_matches = matches[matches['date'] < current_date].sort_values('date')
-    
+
     # Track ratings for all teams that appear, initialized to start_elo
     elo_dict = {}
-    
+    prev_season = None
+
     for _, match in past_matches.iterrows():
         t1 = match.get('team1')
         t2 = match.get('team2')
         winner = match.get('winner')
-        
+        match_season = str(match.get('season', ''))
+
         if not t1 or not t2 or not winner or winner in ['no result', 'tie']:
             continue
-            
+
+        # Phase E: Detect season boundary and apply retention decay
+        if prev_season and match_season and match_season != prev_season:
+            for t in list(elo_dict.keys()):
+                retention = get_retention_pct(t, prev_season, match_season)
+                elo_dict[t] = apply_retention_decay(elo_dict[t], retention)
+
+        prev_season = match_season
+
         # Initialize if new
         if t1 not in elo_dict:
             elo_dict[t1] = start_elo
         if t2 not in elo_dict:
             elo_dict[t2] = start_elo
-            
+
         r1 = elo_dict[t1]
         r2 = elo_dict[t2]
-        
+
         # Expected scores
         e1 = 1 / (1 + 10 ** ((r2 - r1) / 400.0))
         e2 = 1 / (1 + 10 ** ((r1 - r2) / 400.0))
-        
+
         # Actual scores
         s1 = 1.0 if winner == t1 else 0.0
         s2 = 1.0 if winner == t2 else 0.0
-        
+
         # Update ratings
         elo_dict[t1] = r1 + k * (s1 - e1)
         elo_dict[t2] = r2 + k * (s2 - e2)
-        
+
     return elo_dict.get(team, start_elo)
 
 
